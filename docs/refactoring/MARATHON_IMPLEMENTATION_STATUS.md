@@ -209,6 +209,15 @@ docker compose run --rm marathon npx prisma db seed
 2. **✅ Verify all endpoints** - All endpoints working correctly
 3. **⏳ Enable shim** - Ready but waiting for frontend deployment
 
+### Troubleshooting Marathon Errors
+
+If you encounter errors after enabling the shim or during cutover, use **`docs/refactoring/MARATHON_ERRORS_ACTION_PLAN.md`**. It covers:
+
+- Log sources (centralized logging, portal logs, marathon Docker logs) and how to query them
+- Known issues: **auth mismatch** (session vs Bearer for `/me/marathons`), **ID format** (numeric vs UUID), empty data
+- Prioritized action plan (verify env/logs → fix auth → fix ID format → operational follow-up)
+- Recommended first actions (check logs, confirm env, health check, reproduce with shim off/on)
+
 ### After Frontend Deployment
 
 1. **Enable shim:** Set `MARATHON_SHIM_ENABLED=true` in `speakasap-portal/.env`
@@ -265,6 +274,7 @@ docker compose run --rm marathon npx prisma db seed
 - `docs/agents/AGENT07_MARATHON_PARITY_AUDIT_REPORT.md` - Parity audit report
 - `docs/agents/AGENT08_LEGACY_SHIM_AUDIT_REPORT.md` - Shim audit report
 - `docs/refactoring/MARATHON_CUTOVER_COMPLETION_SUMMARY.md` - Cutover summary
+- `docs/refactoring/MARATHON_ERRORS_ACTION_PLAN.md` - Troubleshooting and fix plan for marathon errors
 - `docs/refactoring/MARATHON_IMPLEMENTATION_STATUS.md` - This document
 
 ---
