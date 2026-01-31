@@ -111,6 +111,22 @@ curl 'http://localhost:4215/api/v1/answers/random?stepId=1'
 
 ---
 
+## Phase B and C: Auth and ID Format (MARATHON_ERRORS_ACTION_PLAN)
+
+**Phase B (Auth):** Session user has no Bearer; marathon expects JWT.
+
+- **Implemented:** Portal issues short-lived JWT with `MARATHON_PORTAL_JWT_SECRET` (PyJWT) in `marathon/jwt_for_marathon.py`. Shim adds `Authorization: Bearer <token>` when session user and no header. Marathon accepts portal JWT in `src/shared/auth-client.ts` (`validatePortalToken`) and `auth.guard.ts` (fallback after auth-microservice).
+- **Config:** Same `MARATHON_PORTAL_JWT_SECRET` in speakasap-portal and marathon `.env`.
+
+**Phase C (ID format):** Legacy sends numeric IDs; marathon expects UUIDs.
+
+- **Implemented:** Model `MarathonIdMapping` (entity_type, legacy_id, new_uuid); migration `0022_marathonidmapping`; helper `marathon/id_mapping.py`. Shim translates numeric → UUID in `common.py` (my marathon detail), `winners.py` (winner detail, random report). No mapping → fallback to legacy.
+- **Population:** Populate mapping table during data migration or for new data; empty table means numeric IDs fall back to legacy.
+
+**Ref:** `docs/refactoring/MARATHON_ERRORS_ACTION_PLAN.md`, §6.1.
+
+---
+
 ## Deployment Status
 
 ### Container Status

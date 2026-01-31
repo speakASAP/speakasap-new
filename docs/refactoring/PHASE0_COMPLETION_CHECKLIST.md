@@ -188,6 +188,8 @@ Phase 0 focuses on extracting the `marathon` product as a standalone service wit
     - [ ] `MARATHON_URL` set correctly
     - [ ] `MARATHON_SHIM_ENABLED=false` (initially)
     - [ ] `MARATHON_API_KEY` set (if required)
+    - [ ] `MARATHON_PORTAL_JWT_SECRET` set (same value in speakasap-portal and marathon; required for Phase B auth)
+  - [ ] Phase B (auth): Portal-issued JWT + marathon fallback implemented; Phase C (ID mapping): `MarathonIdMapping` + migration `0022_marathonidmapping`; optionally populate mapping table
 
 - [ ] **Documentation Complete**
   - [ ] `MARATHON_CUTOVER_RUNBOOK.md` reviewed
