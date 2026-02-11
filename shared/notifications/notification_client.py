@@ -80,6 +80,7 @@ class NotificationClient(object):
             'message': message,
             'templateData': template_data or {},
             'emailProvider': 'ses',  # Use AWS SES for SpeakASAP
+            'service': 'speakasap-portal',  # For admin dashboard (Notifications Admin)
         }
 
         if attachments:
@@ -212,6 +213,7 @@ class NotificationClient(object):
             'type': notification_type,
             'recipient': recipient,
             'message': message,
+            'service': 'speakasap-portal',  # For admin dashboard (Notifications Admin)
         }
 
         if subject:
