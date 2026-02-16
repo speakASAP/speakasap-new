@@ -20,8 +20,11 @@ NOTIFICATION_SERVICE_URL = os.getenv(
     'https://notifications.statex.cz'
 )
 
-# Default timeout in seconds
+# Default timeout in seconds (per request; do not increase - check logs if service hangs)
 NOTIFICATION_SERVICE_TIMEOUT = int(os.getenv('NOTIFICATION_SERVICE_TIMEOUT', '10'))
+
+# Retries on timeout/connection (same timeout each time; avoids failing on transient slowness)
+NOTIFICATION_SERVICE_SEND_RETRIES = int(os.getenv('NOTIFICATION_SERVICE_SEND_RETRIES', '2'))
 
 
 class NotificationClient(object):
@@ -94,63 +97,66 @@ class NotificationClient(object):
         logger.info('[NotificationClient] send_email() - Request ID: %s - Payload: recipient=%s, subject=%s, message_length=%d, has_template_data=%s',
                    request_id, to, subject, len(message) if message else 0, bool(template_data))
 
-        try:
-            logger.info('[NotificationClient] send_email() - Request ID: %s - Sending HTTP POST request (timeout=%ss)...',
-                       request_id, self.timeout)
-            request_start = time.time()
-            
-            response = requests.post(
-                url,
-                json=payload,
-                timeout=self.timeout,
-                headers={'Content-Type': 'application/json'}
-            )
-            
-            request_duration = time.time() - request_start
-            logger.info('[NotificationClient] send_email() - Request ID: %s - HTTP response received in %.3fs - Status: %s, Headers: %s',
-                       request_id, request_duration, response.status_code, dict(response.headers))
-            
-            response.raise_for_status()
-            result = response.json()
-            
-            # Verify we got a proper response with notification ID
-            if not result or not result.get('success') or not result.get('data') or not result['data'].get('id'):
-                error_msg = 'Invalid response from notifications-microservice: missing notification ID. Response: {}'.format(result)
-                logger.error('[NotificationClient] send_email() - Request ID: %s - %s', request_id, error_msg)
-                raise Exception(error_msg)
-            
-            notification_id = result['data']['id']
-            total_duration = time.time() - start_time
-            logger.info('[NotificationClient] send_email() - Request ID: %s - Email sent successfully to %s via notifications-microservice. Total duration: %.3fs, Notification ID: %s, Status: %s',
-                       request_id, to, total_duration, notification_id, result['data'].get('status', 'unknown'))
-            return result
-        except requests.Timeout as e:
-            total_duration = time.time() - start_time
-            logger.error('[NotificationClient] send_email() - Request ID: %s - TIMEOUT ERROR after %.3fs: Failed to send email to %s: %s (timeout=%ss)',
-                        request_id, total_duration, to, str(e), self.timeout)
-            logger.error('[NotificationClient] send_email() - Request ID: %s - Timeout details: url=%s, timeout_setting=%s',
-                        request_id, url, self.timeout)
-            raise
-        except requests.ConnectionError as e:
-            total_duration = time.time() - start_time
-            logger.error('[NotificationClient] send_email() - Request ID: %s - CONNECTION ERROR after %.3fs: Failed to send email to %s: %s',
-                        request_id, total_duration, to, str(e))
-            logger.error('[NotificationClient] send_email() - Request ID: %s - Connection error details: url=%s',
-                        request_id, url)
-            raise
-        except requests.RequestException as e:
-            total_duration = time.time() - start_time
-            logger.error('[NotificationClient] send_email() - Request ID: %s - REQUEST ERROR after %.3fs: Failed to send email to %s: %s',
-                        request_id, total_duration, to, str(e))
-            if hasattr(e, 'response') and e.response is not None:
-                logger.error('[NotificationClient] send_email() - Request ID: %s - Response status: %s, Response body: %s',
-                            request_id, e.response.status_code, e.response.text[:500])
-            raise
-        except Exception as e:
-            total_duration = time.time() - start_time
-            logger.error('[NotificationClient] send_email() - Request ID: %s - UNEXPECTED ERROR after %.3fs: Failed to send email to %s: %s',
-                        request_id, total_duration, to, str(e), exc_info=True)
-            raise
+        max_attempts = 1 + max(0, NOTIFICATION_SERVICE_SEND_RETRIES)
+        last_exc = None
+
+        for attempt in range(1, max_attempts + 1):
+            try:
+                logger.info('[NotificationClient] send_email() - Request ID: %s - Attempt %d/%d - Sending HTTP POST (timeout=%ss)...',
+                           request_id, attempt, max_attempts, self.timeout)
+                request_start = time.time()
+
+                response = requests.post(
+                    url,
+                    json=payload,
+                    timeout=self.timeout,
+                    headers={'Content-Type': 'application/json'}
+                )
+
+                request_duration = time.time() - request_start
+                logger.info('[NotificationClient] send_email() - Request ID: %s - HTTP response received in %.3fs - Status: %s, Headers: %s',
+                           request_id, request_duration, response.status_code, dict(response.headers))
+
+                response.raise_for_status()
+                result = response.json()
+
+                # Verify we got a proper response with notification ID
+                if not result or not result.get('success') or not result.get('data') or not result['data'].get('id'):
+                    error_msg = 'Invalid response from notifications-microservice: missing notification ID. Response: {}'.format(result)
+                    logger.error('[NotificationClient] send_email() - Request ID: %s - %s', request_id, error_msg)
+                    raise Exception(error_msg)
+
+                notification_id = result['data']['id']
+                total_duration = time.time() - start_time
+                logger.info('[NotificationClient] send_email() - Request ID: %s - Email sent successfully to %s via notifications-microservice. Total duration: %.3fs, Notification ID: %s, Status: %s',
+                           request_id, to, total_duration, notification_id, result['data'].get('status', 'unknown'))
+                return result
+
+            except (requests.Timeout, requests.ConnectionError) as e:
+                last_exc = e
+                total_duration = time.time() - start_time
+                err_label = 'TIMEOUT' if isinstance(e, requests.Timeout) else 'CONNECTION ERROR'
+                logger.warning('[NotificationClient] send_email() - Request ID: %s - %s on attempt %d/%d after %.3fs: %s (timeout=%ss)',
+                               request_id, err_label, attempt, max_attempts, total_duration, str(e), self.timeout)
+                if attempt < max_attempts:
+                    time.sleep(2)
+                    continue
+                logger.error('[NotificationClient] send_email() - Request ID: %s - All %d attempts failed. Last error: %s',
+                             request_id, max_attempts, str(e))
+                raise
+            except requests.RequestException as e:
+                total_duration = time.time() - start_time
+                logger.error('[NotificationClient] send_email() - Request ID: %s - REQUEST ERROR after %.3fs: Failed to send email to %s: %s',
+                            request_id, total_duration, to, str(e))
+                if hasattr(e, 'response') and e.response is not None:
+                    logger.error('[NotificationClient] send_email() - Request ID: %s - Response status: %s, Response body: %s',
+                                request_id, e.response.status_code, e.response.text[:500])
+                raise
+            except Exception as e:
+                total_duration = time.time() - start_time
+                logger.error('[NotificationClient] send_email() - Request ID: %s - UNEXPECTED ERROR after %.3fs: Failed to send email to %s: %s',
+                            request_id, total_duration, to, str(e), exc_info=True)
+                raise
 
     def get_notification_status(self, notification_id):
         """Get status of a notification by ID
