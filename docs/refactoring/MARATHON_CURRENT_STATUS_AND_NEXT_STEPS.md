@@ -1,8 +1,8 @@
 # Marathon Refactoring - Current Status and Next Steps
 
 **Date:** 2026-02-18  
-**Status:** Service deployed but nginx routing incomplete  
-**Issue:** `https://marathon.statex.cz` returns 404
+**Status:** Deployed. Frontend at marathon.statex.cz uses new API; portal has legacy + shim + random_report logging.  
+**Issue:** ~~404~~ Resolved (routing via `/api/` and `/health` in nginx-api-routes.conf)
 
 ---
 
@@ -60,14 +60,12 @@
 
 ### 1. Fix Nginx Routing (Immediate - Blocking)
 
-**Status:** ✅ Fixed locally, needs deployment
+**Status:** ✅ Fixed and deployed
 
-**Action Required:**
+**Done:**
 
 1. ✅ Updated `marathon/nginx-api-routes.conf` to include `/health` route
-2. ⏳ **Commit and push** the change to repository
-3. ⏳ **Pull changes** on production server (`ssh statex`)
-4. ⏳ **Redeploy marathon** service using deployment script
+2. ✅ Deployed (marathon + portal)
 
 **Commands:**
 
@@ -122,31 +120,26 @@ cd ~/nginx-microservice
 
 ---
 
-## Next Steps After Fixing 404
+## Next Steps (Continue with the plan)
 
-### Immediate (After nginx fix)
+### Immediate (Do now)
 
-1. **Verify all endpoints work via HTTPS:**
+1. **Smoke test marathon.statex.cz:**
+   - Open <https://marathon.statex.cz>z> (winners, about, etc.).
+   - Call API: `curl https://marathon.statex.cz/health`, `curl https://marathon.statex.cz/api/v1/reviews`, `curl https://marathon.statex.cz/api/v1/winners`.
+   - Tick the Verification Checklist below when done.
 
-   ```bash
-   curl https://marathon.statex.cz/health
-   curl https://marathon.statex.cz/api/v1/reviews
-   curl https://marathon.statex.cz/api/v1/winners
-   ```
-
-2. **Check nginx logs** if any issues:
-
-   ```bash
-   ssh statex
-   docker logs nginx-microservice --tail 100
-   ```
+2. **Optional – enable legacy shim on portal** so speakasap.com marathon pages use the new service when possible:
+   - In `speakasap-portal/.env`: `MARATHON_SHIM_ENABLED=true`, `MARATHON_URL=https://marathon.statex.cz` (or internal URL).
+   - Restart portal; check logs for `marathon shim` to confirm forwarding.
 
 ### Short-term (Next Phase)
 
-1. **Frontend Integration**
-   - Update frontend to use `https://marathon.statex.cz/api/v1/` endpoints
-   - Handle pagination format differences (already documented)
-   - Test all marathon features
+1. **Frontend Integration** (frontend live at <https://marathon.statex.cz>)
+   - Ensure frontend uses same-origin API: `https://marathon.statex.cz/api/v1/` (or relative `/api/v1/`).
+   - Backend already allows origin via `CORS_ORIGIN` and `FRONTEND_URL` in marathon `.env`.
+   - Pagination: new API returns `{ items, page, limit, total, nextPage, prevPage }`; frontend must use `response.items` (and optional `response.total`, `response.nextPage`) instead of a plain array or DRF `results`/`next`.
+   - Test: reviews, winners, languages, registration, my marathons (auth), random report.
 
 2. **Enable Legacy Shim** (if needed)
    - Set `MARATHON_SHIM_ENABLED=true` in `speakasap-portal/.env`
@@ -180,16 +173,37 @@ cd ~/nginx-microservice
 
 ---
 
+## Frontend integration (implementation)
+
+Frontend is at **<https://marathon.statex.cz>**. Use the following so it talks to the new API correctly.
+
+- **API base:** Same origin is enough: use **`/api/v1`** (e.g. `GET /api/v1/reviews`, `GET /api/v1/winners`). No need to hardcode `https://marathon.statex.cz` if the frontend is served from that domain.
+- **Pagination (winners, etc.):** New API returns:
+
+  ```json
+  { "items": [...], "page": 1, "limit": 24, "total": 0, "nextPage": null, "prevPage": null }
+  ```
+
+  Use `response.items` for the list; use `response.total`, `response.nextPage`, `response.prevPage` if the UI needs them. Do not expect a top-level array or DRF-style `results`/`next`.
+- **Auth (my marathons):** Send `Authorization: Bearer <token>` (portal-issued JWT when logged in via portal). Backend validates via auth-microservice / portal JWT.
+
+- [x] Winners (and any other paginated lists) use `response.items` and optional pagination fields (winners.js/ts, marathons.js, reports.js).
+- [ ] Authenticated “my marathons” requests send Bearer token.
+- [ ] Smoke test: reviews, winners, languages, registration, my marathons, random report.
+
+---
+
 ## Verification Checklist
 
-After deploying the fix:
+After deploying (tick as you verify):
 
 - [ ] `https://marathon.statex.cz/health` returns `200 OK`
 - [ ] `https://marathon.statex.cz/api/v1/reviews` returns reviews list
 - [ ] `https://marathon.statex.cz/api/v1/winners` returns winners list
 - [ ] All API endpoints accessible via HTTPS
-- [ ] Nginx configs regenerated correctly
+- [ ] Nginx config for marathon.statex.cz
 - [ ] Service health checks passing
+- [ ] Frontend at <https://marathon.statex.cz>z> loads and uses API correctly (winners, reviews)
 
 ---
 
@@ -199,22 +213,15 @@ After deploying the fix:
 
 - ✅ Marathon service is standalone and deployed
 - ✅ Uses common infrastructure correctly
-- ✅ All API endpoints implemented
-- ❌ Nginx routing incomplete (missing `/health` route)
+- ✅ All API endpoints (<https://marathon.statex.cz>z>)
+- ✅ Nginx routing fixed in codebase (`/api/`, `/health` in nginx-api-routes.conf; root `/` omitted to avoid nginx location nesting)
+- ✅ Frontend live at <https://marathon.statex.cz>z>
 
-**Immediate Action:**
+**Next actions:**
 
-1. Commit and push `nginx-api-routes.conf` change
-2. Pull on production
-3. Redeploy marathon service
-
-**After Fix:**
-
-- Marathon will be fully accessible at `https://marathon.statex.cz`
-- All endpoints will work correctly
-- Ready for frontend integration and data migration
-
----
+1. Run smoke test (see “Next Steps” above) and tick Verification Checklist.
+2. Optionally enable legacy shim in portal so speakasap.com marathon traffic can use the new service.
+3. Data migration (legacy DB → new service) and “my marathons” auth on marathon.statex.cz as follow-up.
 
 **Report Generated:** 2026-02-18  
-**Next Review:** After nginx fix deployment
+**Next Review:** After smoke test and optional shim enablement
