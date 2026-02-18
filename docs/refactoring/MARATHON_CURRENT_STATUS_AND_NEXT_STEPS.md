@@ -2,7 +2,7 @@
 
 **Date:** 2026-02-18  
 **Status:** Deployed. Marathon API at **marathon.alfares.cz**. Portal uses new API when MARATHON_URL points to marathon.alfares.cz; legacy + shim available. **statex is in sunset** — use **speakasap** for portal and **dev** for marathon.  
-**Issue:** ~~404~~ Resolved. Nginx uses backend block (path-preserving `location /api/` + `location /health`). Registry: `services.backend`, `api_routes` empty; `marathon/nginx-api-routes.conf` has no route lines.  
+**Issue:** ~~404~~ Resolved. Nginx uses backend block (path-preserving `location /api/` + `location /health`). Registry: `services.backend`, `api_routes` empty; `marathon/nginx/nginx-api-routes.conf` has no route lines.  
 **Note:** The domain (marathon.alfares.cz) is **API-only** — no HTML/UI is served there. The winners/reviews UI is in the portal (speakasap.com or wherever the portal runs). **marathon.alfares.cz runs on the dev server** — `ssh dev`, then `cd ~/Documents/Github/` (or repo root). **Portal/legacy run on the speakasap server** — `ssh speakasap`, then `cd speakasap-portal`.
 
 ---
@@ -45,10 +45,10 @@
 **Fix applied:**
 
 - Nginx generator only emits path-preserving `location /api/` when the registry has a service key **`backend`**. Marathon registry on prod was updated to use `services.backend` (same `container_name_base: marathon`) and `api_routes: []`.
-- `marathon/nginx-api-routes.conf` is intentionally **empty** (comments only). Listing `/api/` or `/health` there would either strip the path or create duplicate locations. Deploy leaves `api_routes` unchanged when the file has no route lines.
+- `marathon/nginx/nginx-api-routes.conf` is intentionally **empty** (comments only). Listing `/api/` or `/health` there would either strip the path or create duplicate locations. Deploy leaves `api_routes` unchanged when the file has no route lines.
 - After regenerating config and reloading nginx: `https://marathon.alfares.cz/health`, `/api/v1/reviews`, `/api/v1/winners` return **200**.
 
-**Do not:** add `/api/` or `/health` to `marathon/nginx-api-routes.conf`, or change prod registry back to `services.marathon` only (would remove the backend block and break `/api/v1/*`).
+**Do not:** add `/api/` or `/health` to `marathon/nginx/nginx-api-routes.conf`, or change prod registry back to `services.marathon` only (would remove the backend block and break `/api/v1/*`).
 
 ---
 
@@ -132,7 +132,7 @@
 
 ### In Repo
 
-- `marathon/nginx-api-routes.conf` - No route lines (backend block provides `/api/` and `/health`). Deploy does not overwrite `api_routes` when file is comment-only.
+- `marathon/nginx/nginx-api-routes.conf` - No route lines (backend block provides `/api/` and `/health`). Deploy does not overwrite `api_routes` when file is comment-only.
 
 ### Production
 
@@ -222,7 +222,7 @@ After deploying (tick as you verify):
 - ✅ Marathon service is standalone and deployed
 - ✅ Uses common infrastructure correctly
 - ✅ All API endpoints (<https://marathon.alfares.cz>)
-- ✅ Nginx routing fixed: registry uses `services.backend` and empty `api_routes`; `marathon/nginx-api-routes.conf` has no route lines so backend block provides `/api/` (path preserved) and `/health`
+- ✅ Nginx routing fixed: registry uses `services.backend` and empty `api_routes`; `marathon/nginx/nginx-api-routes.conf` has no route lines so backend block provides `/api/` (path preserved) and `/health`
 - ✅ Frontend live at <https://marathon.alfares.cz>
 
 **Next actions:**
