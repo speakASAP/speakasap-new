@@ -143,7 +143,7 @@ docker compose ps
 # Nginx health check
 cd nginx-microservice && ./scripts/blue-green/health-check.sh marathon
 # ✅ marathon health check passed
-# ✅ HTTPS check passed: https://marathon.statex.cz/
+# ✅ HTTPS check passed: https://marathon.alfares.cz/
 ```
 
 ### Service Endpoints

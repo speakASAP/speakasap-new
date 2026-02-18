@@ -124,7 +124,7 @@ Phase 0 focuses on extracting the `marathon` product as a standalone service wit
 - [x] **Nginx Integration**
   - [x] `nginx-api-routes.conf` created
   - [x] Routes configured for marathon service
-  - [x] Domain: `marathon.statex.cz`
+  - [x] Domain: `marathon.alfares.cz`
   - [x] Port: 4214 (internal), 4215 (external)
 
 - [x] **Environment Configuration**

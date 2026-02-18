@@ -40,7 +40,7 @@
 
 | Key | Used | Notes |
 | --- | ---- | ------ |
-| `MARATHON_URL` | ✅ All shim paths | Required when shim enabled. Present in `.env` (e.g. `https://marathon.statex.cz`). |
+| `MARATHON_URL` | ✅ All shim paths | Required when shim enabled. Present in `.env` (e.g. `https://marathon.alfares.cz`). |
 | `MARATHON_SHIM_ENABLED` | ✅ All shim paths | Default `'false'`; must be `'true'` to enable. |
 | `MARATHON_API_KEY` | ✅ All shim paths | Optional; sent as `X-Api-Key` when set. |
 

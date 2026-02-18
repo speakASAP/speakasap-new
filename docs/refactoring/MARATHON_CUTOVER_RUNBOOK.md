@@ -48,7 +48,7 @@
 
 **speakasap-portal** `.env`:
 
-- `MARATHON_URL` — base URL of new marathon service (e.g. `https://marathon.statex.cz`)
+- `MARATHON_URL` — base URL of new marathon service (e.g. `https://marathon.alfares.cz`)
 - `MARATHON_SHIM_ENABLED` — `false` (default) or `true` to enable shim
 - `MARATHON_API_KEY` — optional
 

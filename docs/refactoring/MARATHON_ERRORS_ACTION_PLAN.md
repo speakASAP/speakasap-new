@@ -41,11 +41,11 @@ curl -s "https://logging.statex.cz/api/logs/query?service=speakasap-portal&limit
 - **Local logger:** `CentralizedLogger` in `utils/logger.py`; logs to console and optionally `logs/speakasap-portal.log`.
 - **Django LOGGING:** `portal/settings.py` — e.g. `logs/app.log`, `logs/app_errors.log`.
 
-**On production (e.g. statex):**
+**On production (speakasap server):**
 
 ```bash
-ssh statex
-cd /home/portal_db/speakasap-portal   # or actual deploy path)
+ssh speakasap
+cd speakasap-portal
 grep -E "marathon shim|marathon.*failed" logs/*.log 2>/dev/null | tail -100
 # or wherever gunicorn/supervisor write logs
 ```
@@ -55,11 +55,11 @@ grep -E "marathon shim|marathon.*failed" logs/*.log 2>/dev/null | tail -100
 - **Docker:** `docker compose logs marathon --tail 200` (from marathon repo root).
 - **Blue/green:** Use the active stack (e.g. `docker-compose.blue.yml` or `docker-compose.green.yml`) and the corresponding container name (e.g. `marathon-blue`, `marathon-green`).
 
-**On production:**
+**On production (dev server):**
 
 ```bash
-ssh statex
-cd /path/to/marathon   # deploy path)
+ssh dev
+cd ~/Documents/Github/marathon
 docker compose -f docker-compose.green.yml logs marathon-green --tail 200
 # or blue, depending on active deployment
 ```
@@ -211,7 +211,7 @@ Marathon DB has no (or little) migrated data yet. Behavior is expected until:
 ## 7. Recommended First Actions
 
 1. **Check logs** (Phase A):
-   - On **statex** (prod): `ssh statex`, then grep speakasap-portal and marathon log paths for `marathon shim`, `marathon ... failed`, `ID format mismatch`, and auth-related errors.
+   - On **speakasap** (portal): `ssh speakasap`, `cd speakasap-portal`, then grep log paths for `marathon shim`, `marathon ... failed`, `ID format mismatch`, and auth-related errors. On **dev** (marathon): `ssh dev`, `cd ~/Documents/Github/marathon`, then docker compose logs.
    - Query centralized logging (`GET /api/logs/query`) for `service=speakasap-portal` and `service=marathon`, filter by `level=error` and by "marathon shim" messages.
 2. **Confirm env:** `MARATHON_URL`, `MARATHON_SHIM_ENABLED`, `MARATHON_API_KEY` in `speakasap-portal/.env` on the environment you’re debugging.
 3. **Health check:** `curl -s $MARATHON_URL/health` → `{"status":"ok"}`.
