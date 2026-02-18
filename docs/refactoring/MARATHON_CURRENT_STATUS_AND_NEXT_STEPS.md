@@ -2,7 +2,7 @@
 
 **Date:** 2026-02-18  
 **Status:** Deployed. Frontend at marathon.statex.cz uses new API; portal has legacy + shim + random_report logging.  
-**Issue:** ~~404~~ Resolved (routing via `/api/` and `/health` in nginx-api-routes.conf)
+**Issue:** ~~404~~ Resolved. Nginx uses backend block (path-preserving `location /api/` + `location /health`). Registry: `services.backend`, `api_routes` empty; `marathon/nginx-api-routes.conf` has no route lines.
 
 ---
 
@@ -39,55 +39,25 @@
    - ✅ SSL certificates configured
    - ✅ `/api/` route configured to proxy to marathon service
 
-### ❌ Current Issue
+### ✅ Nginx / API Routing (Resolved)
 
-**Problem:** `https://marathon.statex.cz/health` returns `404 Not Found`
+**Fix applied:**
 
-**Root Cause:**
+- Nginx generator only emits path-preserving `location /api/` when the registry has a service key **`backend`**. Marathon registry on prod was updated to use `services.backend` (same `container_name_base: marathon`) and `api_routes: []`.
+- `marathon/nginx-api-routes.conf` is intentionally **empty** (comments only). Listing `/api/` or `/health` there would either strip the path or create duplicate locations. Deploy leaves `api_routes` unchanged when the file has no route lines.
+- After regenerating config and reloading nginx: `https://marathon.statex.cz/health`, `/api/v1/reviews`, `/api/v1/winners` return **200**.
 
-- Nginx configuration only routes `/api/` to marathon service
-- The `/health` endpoint is at root level (not under `/api/v1` prefix)
-- Nginx doesn't have a location block for `/health`, so it returns 404
-
-**Solution:**
-
-- Add `/health` to `nginx-api-routes.conf` file
-- Redeploy marathon service to regenerate nginx configs
+**Do not:** add `/api/` or `/health` to `marathon/nginx-api-routes.conf`, or change prod registry back to `services.marathon` only (would remove the backend block and break `/api/v1/*`).
 
 ---
 
 ## What Needs to Be Done Right Now
 
-### 1. Fix Nginx Routing (Immediate - Blocking)
+### 1. Nginx Routing
 
-**Status:** ✅ Fixed and deployed
+**Status:** ✅ Fixed and verified
 
-**Done:**
-
-1. ✅ Updated `marathon/nginx-api-routes.conf` to include `/health` route
-2. ✅ Deployed (marathon + portal)
-
-**Commands:**
-
-```bash
-# On local dev (after committing):
-cd /Users/sergiystashok/Documents/GitHub/marathon
-git add nginx-api-routes.conf
-git commit -m "Add /health route to nginx-api-routes.conf"
-git push origin main
-
-# On production:
-ssh statex
-cd ~/marathon
-git pull origin main
-cd ~/nginx-microservice
-./scripts/blue-green/deploy-smart.sh marathon
-```
-
-**Expected Result:**
-
-- `https://marathon.statex.cz/health` returns `200 OK` with `{"status":"ok"}`
-- `https://marathon.statex.cz/api/v1/reviews` works correctly
+**Smoke test (all 200):** `/health`, `/api/v1/reviews`, `/api/v1/winners`.
 
 ### 2. Verify Standalone Status
 
@@ -197,13 +167,13 @@ Frontend is at **<https://marathon.statex.cz>**. Use the following so it talks t
 
 After deploying (tick as you verify):
 
-- [ ] `https://marathon.statex.cz/health` returns `200 OK`
-- [ ] `https://marathon.statex.cz/api/v1/reviews` returns reviews list
-- [ ] `https://marathon.statex.cz/api/v1/winners` returns winners list
+- [x] `https://marathon.statex.cz/health` returns `200 OK`
+- [x] `https://marathon.statex.cz/api/v1/reviews` returns reviews list
+- [x] `https://marathon.statex.cz/api/v1/winners` returns winners list
 - [ ] All API endpoints accessible via HTTPS
 - [ ] Nginx config for marathon.statex.cz
 - [ ] Service health checks passing
-- [ ] Frontend at <https://marathon.statex.cz>z> loads and uses API correctly (winners, reviews)
+- [ ] Frontend at <https://marathon.statex.cz> loads and uses API correctly (winners, reviews)
 
 ---
 
@@ -214,7 +184,7 @@ After deploying (tick as you verify):
 - ✅ Marathon service is standalone and deployed
 - ✅ Uses common infrastructure correctly
 - ✅ All API endpoints (<https://marathon.statex.cz>z>)
-- ✅ Nginx routing fixed in codebase (`/api/`, `/health` in nginx-api-routes.conf; root `/` omitted to avoid nginx location nesting)
+- ✅ Nginx routing fixed: registry uses `services.backend` and empty `api_routes`; `marathon/nginx-api-routes.conf` has no route lines so backend block provides `/api/` (path preserved) and `/health`
 - ✅ Frontend live at <https://marathon.statex.cz>z>
 
 **Next actions:**
