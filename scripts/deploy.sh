@@ -54,8 +54,9 @@ echo -e "${BLUE}║        SpeakASAP Application - Production Deployment        
 echo -e "${BLUE}╚════════════════════════════════════════════════════════════╝${NC}"
 echo ""
 
-# Service name
+# Service name and display name (first letter uppercase for messages)
 SERVICE_NAME="speakasap"
+DISPLAY_NAME="$(echo "${SERVICE_NAME:0:1}" | tr 'a-z' 'A-Z')${SERVICE_NAME:1}"
 
 # Detect nginx-microservice path
 # Try common production paths first, then fallback to relative path
@@ -141,9 +142,9 @@ cd "$NGINX_MICROSERVICE_PATH"
 # Execute the deployment script
 if "$DEPLOY_SCRIPT" "$SERVICE_NAME"; then
     echo ""
-    echo -e "${GREEN}╔════════════════════════════════════════════════════════════╗${NC}"
-    echo -e "${GREEN}║         ✅ Deployment completed successfully!              ║${NC}"
-    echo -e "${GREEN}╚════════════════════════════════════════════════════════════╝${NC}"
+    echo -e "${GREEN}╔══════════════════════════════════════════════════════════════════════╗${NC}"
+    echo -e "${GREEN}║  ✅ ${DISPLAY_NAME} deployment completed successfully!               ║${NC}"
+    echo -e "${GREEN}╚══════════════════════════════════════════════════════════════════════╝${NC}"
     echo ""
     echo "The speakasap application has been deployed using blue/green deployment."
     echo "Check the status with:"
@@ -152,9 +153,9 @@ if "$DEPLOY_SCRIPT" "$SERVICE_NAME"; then
     exit 0
 else
     echo ""
-    echo -e "${RED}╔════════════════════════════════════════════════════════════╗${NC}"
-    echo -e "${RED}║                 ❌ Deployment failed!                      ║${NC}"
-    echo -e "${RED}╚════════════════════════════════════════════════════════════╝${NC}"
+    echo -e "${RED}╔══════════════════════════════════════════════════════════════════════╗${NC}"
+    echo -e "${RED}║  ❌ ${DISPLAY_NAME} deployment failed!                                ║${NC}"
+    echo -e "${RED}╚══════════════════════════════════════════════════════════════════════╝${NC}"
     echo ""
     echo "Please check the error messages above and:"
     echo "  1. Verify nginx-microservice is properly configured"
