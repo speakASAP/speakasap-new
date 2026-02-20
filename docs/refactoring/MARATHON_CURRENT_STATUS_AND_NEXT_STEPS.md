@@ -1,7 +1,7 @@
 # Marathon Refactoring - Current Status and Next Steps
 
 **Date:** 2026-02-18  
-**Status:** Deployed. Marathon API at **marathon.alfares.cz**. Portal uses new API when MARATHON_URL points to marathon.alfares.cz; **legacy API fallback removed** — shim returns **503** when marathon service is unavailable (no DB/legacy fallback). **statex is in sunset** — use **speakasap** for portal and **dev** for marathon.  
+**Status:** Deployed. Marathon API at **marathon.alfares.cz**. **Legacy marathon removed from portal:** server-rendered marathon pages and Django models removed; `/marathon/` redirects to new service; API shim is model-free (UUID-only; 503 when service unavailable). **Archive legacy DB on prod:** run migration `0023_remove_marathon_legacy_models` to drop marathon tables. **statex is in sunset** — use **speakasap** for portal and **dev** for marathon.  
 **Issue:** ~~404~~ Resolved. Nginx uses backend block (path-preserving `location /api/` + `location /health`). Registry: `services.backend`, `api_routes` empty; `marathon/nginx/nginx-api-routes.conf` has no route lines.  
 **Note:** The domain (marathon.alfares.cz) is **API-only** — no HTML/UI is served there. The winners/reviews UI is in the portal (speakasap.com or wherever the portal runs). **marathon.alfares.cz runs on the dev server** — `ssh dev`, then `cd ~/Documents/Github/` (or repo root). **Portal/legacy run on the speakasap server** — `ssh speakasap`, then `cd speakasap-portal`.
 
@@ -119,13 +119,16 @@
 
 3. **Data Migration** — see “Data export” section below.
 
-### Long-term (Future)
+### Long-term (Done)
 
-1. **Legacy API fallback removed (done)**
-   - Portal API shim (winners, common, auth register, reviews) no longer falls back to legacy DB. When the marathon service is unavailable or shim is disabled, the API returns **503** (or **404** where appropriate). Server-rendered views and Django models (Winner, Marathoner, Marathon, etc.) remain for profile and marathon pages.
-2. **Further legacy cleanup (optional)**
-   - After full cutover, consider removing unused marathon code from speakasap-portal
-   - Archive legacy marathon database when no longer needed
+1. **Legacy marathon removed from portal (done)**
+   - Server-rendered marathon pages removed; `/marathon/` and `/marathon/*` redirect to new service (MARATHON_URL / marathon.alfares.cz).
+   - Legacy Django models removed (Marathon, Step, Marathoner, Answer, Winner, MarathonIdMapping, MarathonProduct, MarathonGift, etc.). Migration `0023_remove_marathon_legacy_models` drops the tables.
+   - API shim is model-free: forwards to new API only; numeric legacy IDs return **404** (UUID-only); **503** when service unavailable.
+   - Profile/cabinet and language pages link to new marathon service; social auth pipeline and admin cron marathon tasks removed.
+2. **Archive legacy DB on prod (runbook)**
+   - On **speakasap**: `cd speakasap-portal && python manage.py migrate marathon`
+   - This applies migration `0023_remove_marathon_legacy_models` and drops all `marathon_*` tables. Ensure backup/export is done if needed before running.
 
 ---
 
