@@ -287,7 +287,7 @@ Log lines `marathon shim list my marathons` and `marathon shim get my marathon` 
 4. ✅ Portal ID mapping: `marathon_id_mapping.json` loaded on speakasap via `python manage.py load_marathon_id_mapping`; shim resolves legacy numeric IDs to UUIDs.
 5. ✅ Cutover in place: shim logs show successful forwarding (list winners, random report with UUID mapping, etc.). Fast winners API (DB-only list) and placeholder-first frontend deployed.
 
-**Next step (refactoring):** **Long-term – Remove legacy code.** After a period of stable traffic on the shim, plan to: remove marathon Django app code from speakasap-portal (or reduce to a thin proxy if needed), clean up legacy shim code, archive legacy marathon DB. See "Long-term (Future)" above.
+**Legacy code removed (2026-02-20):** Server-rendered marathon views, templates references, legacy serializers and management commands have been removed or stubbed in speakasap-portal. Only the API shim (rest/urls marathons/), redirect (speakasap_site marathon_redirect_view, marathon.host_url), and shared form widgets (AnswerForm for grammar/seven) remain. **Archive legacy DB on prod:** run migration (see runbook below). **Check prod logs** (after deploy): `ssh speakasap && cd speakasap-portal && tail -f logs/app.log logs/app_errors.log` per prod.mdc.
 
 **Report Generated:** 2026-02-18  
-**Last Updated:** 2026-02-20 (cutover complete; next step: legacy removal)
+**Last Updated:** 2026-02-20 (legacy server-rendered code removed; archive DB runbook below)
