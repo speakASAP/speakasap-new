@@ -1,7 +1,7 @@
 # Marathon Refactoring - Current Status and Next Steps
 
 **Date:** 2026-02-18  
-**Status:** Deployed. Marathon API at **marathon.alfares.cz**. Portal uses new API when MARATHON_URL points to marathon.alfares.cz; legacy + shim available. **statex is in sunset** — use **speakasap** for portal and **dev** for marathon.  
+**Status:** Deployed. Marathon API at **marathon.alfares.cz**. Portal uses new API when MARATHON_URL points to marathon.alfares.cz; **legacy API fallback removed** — shim returns **503** when marathon service is unavailable (no DB/legacy fallback). **statex is in sunset** — use **speakasap** for portal and **dev** for marathon.  
 **Issue:** ~~404~~ Resolved. Nginx uses backend block (path-preserving `location /api/` + `location /health`). Registry: `services.backend`, `api_routes` empty; `marathon/nginx/nginx-api-routes.conf` has no route lines.  
 **Note:** The domain (marathon.alfares.cz) is **API-only** — no HTML/UI is served there. The winners/reviews UI is in the portal (speakasap.com or wherever the portal runs). **marathon.alfares.cz runs on the dev server** — `ssh dev`, then `cd ~/Documents/Github/` (or repo root). **Portal/legacy run on the speakasap server** — `ssh speakasap`, then `cd speakasap-portal`.
 
@@ -121,10 +121,11 @@
 
 ### Long-term (Future)
 
-1. **Remove Legacy Code**
-   - After full cutover, remove marathon code from speakasap-portal
-   - Clean up legacy shim code
-   - Archive legacy marathon database
+1. **Legacy API fallback removed (done)**
+   - Portal API shim (winners, common, auth register, reviews) no longer falls back to legacy DB. When the marathon service is unavailable or shim is disabled, the API returns **503** (or **404** where appropriate). Server-rendered views and Django models (Winner, Marathoner, Marathon, etc.) remain for profile and marathon pages.
+2. **Further legacy cleanup (optional)**
+   - After full cutover, consider removing unused marathon code from speakasap-portal
+   - Archive legacy marathon database when no longer needed
 
 ---
 
@@ -281,6 +282,9 @@ Log lines `marathon shim list my marathons` and `marathon shim get my marathon` 
 2. ✅ Legacy shim enabled in portal: `MARATHON_SHIM_ENABLED=true`, `MARATHON_URL=https://marathon.alfares.cz` in speakasap-portal `.env`.
 3. ✅ Data migration (export → load into marathon DB on dev): done; new API returns 3608 winners (verified via `GET https://marathon.alfares.cz/api/v1/winners`).
 4. ✅ Portal ID mapping: `marathon_id_mapping.json` loaded on speakasap via `python manage.py load_marathon_id_mapping`; shim resolves legacy numeric IDs to UUIDs.
+5. ✅ Cutover in place: shim logs show successful forwarding (list winners, random report with UUID mapping, etc.). Fast winners API (DB-only list) and placeholder-first frontend deployed.
+
+**Next step (refactoring):** **Long-term – Remove legacy code.** After a period of stable traffic on the shim, plan to: remove marathon Django app code from speakasap-portal (or reduce to a thin proxy if needed), clean up legacy shim code, archive legacy marathon DB. See "Long-term (Future)" above.
 
 **Report Generated:** 2026-02-18  
-**Last Updated:** 2026-02-18 (portal ID mapping marked completed)
+**Last Updated:** 2026-02-20 (cutover complete; next step: legacy removal)
