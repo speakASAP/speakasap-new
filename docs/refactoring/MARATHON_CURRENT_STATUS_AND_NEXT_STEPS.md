@@ -177,7 +177,13 @@
 
 - **Load (on dev):**  
   `cd marathon && node scripts/load-marathon-export.js marathon_export.json`  
+  Or Python (when DB reachable): `pip install -r scripts/requirements-load.txt && python3 scripts/load_marathon_export.py marathon_export.json`  
   Requires `DATABASE_URL` in marathon `.env`. Inserts in order; writes `marathon_id_mapping.json` beside the export for optional MarathonIdMapping population in the portal.
+
+**Data migration status (verified 2026-02):**
+
+- ✅ **Export → load into marathon DB: done.** The new marathon API at <https://marathon.alfares.cz> returns real data: `GET /api/v1/winners` returns `total: 3608` and items with UUIDs; `/api/v1/reviews` returns the list. The marathon service DB was loaded from the export.
+- ✅ **Portal ID mapping: done.** `marathon_id_mapping.json` was loaded into the portal on **speakasap** via `python3 manage.py load_marathon_id_mapping path/to/marathon_id_mapping.json`. The shim can now resolve legacy numeric IDs (winner detail, my marathon by ID, random report) to new UUIDs and forward to the new API. **One-time verification (2026-02-20) on speakasap:** `cd speakasap-portal && python3 manage.py shell -c "from marathon.models import MarathonIdMapping; print('MarathonIdMapping count:', MarathonIdMapping.objects.count())"` → **72,449** (step: 377, marathoner: 53,469, winner: 18,603). Re-running the load command is safe (update_or_create).
 
 ---
 
@@ -212,6 +218,7 @@ After deploying (tick as you verify):
 - [x] Nginx config for marathon.alfares.cz (backend block; symlink green)
 - [x] Service health checks passing (confirm on server if needed)
 - [x] Frontend (portal) loads and uses API correctly when MARATHON_URL=marathon.alfares.cz (winners, reviews) – manual check
+- [x] Portal MarathonIdMapping loaded on speakasap (`load_marathon_id_mapping`); verified 2026-02-20: 72,449 rows (step 377, marathoner 53,469, winner 18,603)
 
 ---
 
@@ -271,8 +278,9 @@ Log lines `marathon shim list my marathons` and `marathon shim get my marathon` 
 **Next actions:**
 
 1. ✅ Smoke test done (health, reviews, winners, languages, random, me/marathons).
-2. Optionally enable legacy shim in portal: `MARATHON_SHIM_ENABLED=true`, `MARATHON_URL=https://marathon.alfares.cz` in speakasap-portal `.env`; restart portal.
-3. Data export: run export from legacy DB on speakasap (`ssh speakasap && cd speakasap-portal`), transform, then load into marathon service DB on dev (see "Data export" section).
+2. ✅ Legacy shim enabled in portal: `MARATHON_SHIM_ENABLED=true`, `MARATHON_URL=https://marathon.alfares.cz` in speakasap-portal `.env`.
+3. ✅ Data migration (export → load into marathon DB on dev): done; new API returns 3608 winners (verified via `GET https://marathon.alfares.cz/api/v1/winners`).
+4. ✅ Portal ID mapping: `marathon_id_mapping.json` loaded on speakasap via `python manage.py load_marathon_id_mapping`; shim resolves legacy numeric IDs to UUIDs.
 
 **Report Generated:** 2026-02-18  
-**Last Updated:** 2026-02-18 (post-deploy verification)
+**Last Updated:** 2026-02-18 (portal ID mapping marked completed)
