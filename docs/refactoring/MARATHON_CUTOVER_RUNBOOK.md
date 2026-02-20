@@ -46,7 +46,7 @@
 
 ## Environment
 
-**speakasap-portal** `.env`:
+**speakasap-portal:** Keys are in `.env.example`. Values are in `.env` (not in the repo; do not edit `.env` or any files on the prod server). Deploy via **git pull** and your deploy script only.
 
 - `MARATHON_URL` — base URL of new marathon service (e.g. `https://marathon.alfares.cz`)
 - `MARATHON_SHIM_ENABLED` — `false` (default) or `true` to enable shim
@@ -69,33 +69,29 @@
    # Expected: 200 OK
    ```
 
-3. **Environment variables configured**
-
-   ```bash
-   grep -E "MARATHON_(URL|SHIM_ENABLED|API_KEY)" speakasap-portal/.env
-   # Verify MARATHON_URL is set, MARATHON_SHIM_ENABLED=false
-   ```
+3. **Environment variables**  
+   Keys are in `speakasap-portal/.env.example`. Verify `MARATHON_URL` and `MARATHON_SHIM_ENABLED` are set via your config (do not edit files on the prod server). Deploy only via git pull and your deploy script.
 
 ---
 
 ## Cutover Steps
 
 1. **Pre-check**  
-   - `curl -f $MARATHON_URL/health` → 200
-   - Confirm `MARATHON_SHIM_ENABLED=false` in `.env`
+   - `curl -f $MARATHON_URL/health` → 200 (e.g. `https://marathon.alfares.cz/health`)
+   - Confirm shim is disabled before enabling (no direct edits on prod server).
    - Verify all prerequisites are GO
 
-2. **Enable shim**  
+2. **Enable shim (codebase + GitHub only; no prod server edits)**  
+
+   Ensure `MARATHON_URL` and `MARATHON_SHIM_ENABLED=true` are set (keys in `.env.example`; use your own config process — do not edit files on the prod server). Then deploy via GitHub only:
 
    ```bash
    cd speakasap-portal
-   cp .env .env.backup.$(date +%Y%m%d_%H%M%S)
-   sed -i 's/^MARATHON_SHIM_ENABLED=.*/MARATHON_SHIM_ENABLED=true/' .env
-   # Restart service (adjust for your deployment):
-   # systemctl restart speakasap-portal
-   # OR docker-compose restart speakasap-portal
-   # OR your deployment script
+   git pull
+   ./scripts/deploy.sh
    ```
+
+   The app loads `.env` at startup via `portal/wsgi.py`. Do not run `sed`, `cp .env`, or any other commands that modify files on the prod server.
 
 3. **Monitor logs (≈10 min)**  
    Centralized logger: look for `"marathon shim"` patterns:
@@ -137,12 +133,10 @@
 ## Rollback
 
 1. **Disable shim**  
-   `sed -i 's/^MARATHON_SHIM_ENABLED=.*/MARATHON_SHIM_ENABLED=false/' .env`  
-   Restart speakasap-portal.
+   Set `MARATHON_SHIM_ENABLED=false` via your config process (do not edit files on the prod server). Then run your normal deployment: `git pull` (if needed) and your deploy script (e.g. `./scripts/deploy.sh`).
 
 2. **Verify**  
-   `grep MARATHON_SHIM_ENABLED .env` → `false`.  
-   `curl -f https://<portal>/marathon/api/winners.json` → legacy response.
+   After redeploy, `curl -f https://<portal>/marathon/api/winners.json` → legacy response.
 
 3. **Investigate**  
    Check logs, marathon service health, network. Document for next attempt.

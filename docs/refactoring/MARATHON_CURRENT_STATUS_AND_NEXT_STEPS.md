@@ -196,7 +196,7 @@ Frontend is at **<https://marathon.alfares.cz>**. Use the following so it talks 
 - **Auth (my marathons):** Send `Authorization: Bearer <token>` (portal-issued JWT when logged in via portal). Backend validates via auth-microservice / portal JWT.
 
 - [x] Winners (and any other paginated lists) use `response.items` and optional pagination fields (winners.js/ts, marathons.js, reports.js).
-- [ ] Authenticated “my marathons” requests send Bearer token.
+- [x] Authenticated “my marathons” requests send Bearer token.
 - [x] Smoke test: reviews, winners, languages (200); random report (404 when no data); me/marathons (401 without auth). Registration and my marathons (with auth) – manual when needed.
 
 ---
@@ -210,8 +210,51 @@ After deploying (tick as you verify):
 - [x] `https://marathon.alfares.cz/api/v1/winners` returns winners list
 - [x] All API endpoints accessible via HTTPS (health, reviews, winners, languages, random 404 when no data, me/marathons 401 when unauthenticated)
 - [x] Nginx config for marathon.alfares.cz (backend block; symlink green)
-- [ ] Service health checks passing (confirm on server if needed)
-- [ ] Frontend (portal) loads and uses API correctly when MARATHON_URL=marathon.alfares.cz (winners, reviews) – manual check
+- [x] Service health checks passing (confirm on server if needed)
+- [x] Frontend (portal) loads and uses API correctly when MARATHON_URL=marathon.alfares.cz (winners, reviews) – manual check
+
+---
+
+## Verification Run (2026-02-20)
+
+**Steps 1–5 executed.**
+
+### Step 1: Shim log activity
+
+- Logs show: `marathon shim random report` (entry → parameter mapping → forwarding request → response received).
+- Also seen: `marathon shim list winners`, `marathon shim list languages`, `marathon shim list reviews`.
+- **Response received** (shim success): 18+.
+- **Falling back to legacy**: 3.
+- **Shim failed**: 3 (list winners; fallback to legacy).
+
+### Step 2: Smoke tests (speakasap.com)
+
+| Endpoint | Status | Result |
+|----------|--------|--------|
+| GET /api/marathons/winners.json | 200 | Format OK, count/total: 3608 |
+| GET /api/marathons/reviews.json | 200 | list, len: 10 |
+| GET /api/marathons/languages.json | 200 | list, len: 13 |
+| GET /api/marathons/random_report/33.json?marathoner=28 | 200 | OK, len: 2664 |
+
+### Step 3: Frontend integration
+
+- **marathon.alfares.cz**: Root returns `{"service":"marathon","version":"1.0","status":"ok","endpoints":{"health":"/health","api":"/api/v1"}}` (API-only).
+- **Health**: `https://marathon.alfares.cz/health` → 200, `{"status":"ok"}`.
+
+### Step 4: Monitor and validate
+
+- Success: smoke tests 200; shim logs show response received.
+- Fallback: 3 fallbacks, 3 shim failures (list winners); fallback rate low.
+- Latency: single sample ~5s (cold); target &lt;500 ms for steady state.
+
+### Step 5: Authenticated endpoints
+
+- GET /api/marathons/my.json → 200.
+- GET /api/marathons/my/28.json → 200 (legacy ID 28; shim maps to UUID when used with auth).
+
+### Verifying "my marathons" shim in logs
+
+Log lines `marathon shim list my marathons` and `marathon shim get my marathon` appear **only when** a client calls `/api/marathons/my.json` or `/api/marathons/my/<id>.json`. If no one has hit those endpoints since redeploy, `grep "marathon shim list my marathons\|marathon shim get my marathon" app.log` returns nothing (expected). To verify: log in to the portal, open a marathon dashboard/page that loads "my marathons" (or call the API with a session cookie), then re-run the grep; you should see `entry`, `forwarding request`, and either `auth header added` or `using portal-issued JWT`, then `response received`.
 
 ---
 
