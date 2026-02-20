@@ -143,6 +143,10 @@ class NotificationClient(object):
                     continue
                 logger.error('[NotificationClient] send_email() - Request ID: %s - All %d attempts failed. Last error: %s',
                              request_id, max_attempts, str(e))
+                if isinstance(e, requests.Timeout):
+                    logger.error('[NotificationClient] Read timeout after %d attempts (timeout=%ss per request). '
+                                'Check notifications-microservice logs and health; do not increase timeout (project rule).',
+                                max_attempts, self.timeout)
                 raise
             except requests.RequestException as e:
                 total_duration = time.time() - start_time
