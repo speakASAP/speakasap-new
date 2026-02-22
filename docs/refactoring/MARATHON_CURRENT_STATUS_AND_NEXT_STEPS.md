@@ -3,7 +3,7 @@
 **Date:** 2026-02-18  
 **Status:** Deployed. Marathon API at **marathon.alfares.cz**. **Legacy marathon removed from portal:** server-rendered marathon pages and Django models removed; `/marathon/` redirects to new service; API shim is model-free (UUID-only; 503 when service unavailable). **Archive legacy DB on prod:** run migration `0023_remove_marathon_legacy_models` to drop marathon tables. **statex is in sunset** — use **speakasap** for portal and **dev** for marathon.  
 **Issue:** ~~404~~ Resolved. Nginx uses backend block (path-preserving `location /api/` + `location /health`). Registry: `services.backend`, `api_routes` empty; `marathon/nginx/nginx-api-routes.conf` has no route lines.  
-**Note:** The domain (marathon.alfares.cz) is **API-only** — no HTML/UI is served there. The winners/reviews UI is in the portal (speakasap.com or wherever the portal runs). **marathon.alfares.cz runs on the dev server** — `ssh dev`, then `cd ~/Documents/Github/` (or repo root). **Portal/legacy run on the speakasap server** — `ssh speakasap`, then `cd speakasap-portal`.
+**Note:** The domain (marathon.alfares.cz) now serves the **frontend** at `GET /` (see `MARATHON_FRONTEND_REFACTORING.md`). Service info for API clients is at `GET /info`. Previously API-only. **marathon.alfares.cz runs on the dev server** — `ssh dev`, then `cd ~/Documents/Github/` (or repo root). **Portal/legacy run on the speakasap server** — `ssh speakasap`, then `cd speakasap-portal`.
 
 ---
 
@@ -93,6 +93,8 @@
 
 ## Next Steps (Continue with the plan)
 
+**Step-by-step implementation plan:** For a solid, ordered plan to implement marathon frontend refactoring (landings → public pages → auth/profile → step pages → verification), follow **`docs/refactoring/MARATHON_FRONTEND_REFACTORING.md`** — section **«Step-by-step implementation plan»** (Steps 0–8). Execute steps in order; use the Master checklist and Reference sections there for details.
+
 ### Immediate (Do now)
 
 1. **Smoke test marathon.alfares.cz:**
@@ -127,8 +129,9 @@
    - API shim is model-free: forwards to new API only; numeric legacy IDs return **404** (UUID-only); **503** when service unavailable.
    - Profile/cabinet and language pages link to new marathon service; social auth pipeline and admin cron marathon tasks removed.
 2. **Archive legacy DB on prod (runbook)**
-   - On **speakasap**: `cd speakasap-portal && python manage.py migrate marathon`
+   - **Prod only:** On **speakasap**: `cd speakasap-portal && python manage.py migrate marathon`
    - This applies migration `0023_remove_marathon_legacy_models` and drops all `marathon_*` tables. Ensure backup/export is done if needed before running.
+   - **Do not apply 0023 on local:** Run this migration only on production. On your local machine, do not run `migrate marathon` (or run `migrate marathon 0022_marathonidmapping` to stay at 0022) so local DB keeps marathon tables if needed.
 
 ---
 
