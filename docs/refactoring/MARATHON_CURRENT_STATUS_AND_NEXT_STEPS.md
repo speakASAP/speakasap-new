@@ -293,4 +293,14 @@ Log lines `marathon shim list my marathons` and `marathon shim get my marathon` 
 **Legacy code removed (2026-02-20):** Server-rendered marathon views, templates references, legacy serializers and management commands have been removed or stubbed in speakasap-portal. Only the API shim (rest/urls marathons/), redirect (speakasap_site marathon_redirect_view, marathon.host_url), and shared form widgets (AnswerForm for grammar/seven) remain. **Archive legacy DB on prod:** run migration (see runbook below). **Check prod logs** (after deploy): `ssh speakasap && cd speakasap-portal && tail -f logs/app.log logs/app_errors.log` per prod.mdc.
 
 **Report Generated:** 2026-02-18  
-**Last Updated:** 2026-02-20 (legacy server-rendered code removed; archive DB runbook below)
+**Last Updated:** 2026-02-22 (frontend refactoring complete; verification done)
+
+---
+
+## Frontend refactoring complete (Steps 0–7)
+
+**Status:** Full SPA at marathon.alfares.cz is implemented and deployed. Browser smoke test passed (2026-02-22).
+
+- **Plan:** `MARATHON_FRONTEND_REFACTORING.md` (Steps 0–8). Steps 0–7 done; Step 8 = rollback procedure only.
+- **Verification:** `MARATHON_VERIFICATION_CHECKLIST.md` — Test run table and 7.1–7.4. 7.1 smoke test completed for /, /de/, /winners, /about, /reviews, /profile, /register, /awards, /support, /rules, /faq, /api/v1/health.
+- **Next (optional):** 7.2 redirect check (speakasap.com/marathon → marathon.alfares.cz); 7.4 ongoing log monitoring. Step 8 rollback if ever needed.
