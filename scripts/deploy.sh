@@ -143,7 +143,7 @@ cd "$NGINX_MICROSERVICE_PATH"
 if "$DEPLOY_SCRIPT" "$SERVICE_NAME"; then
     echo ""
     echo -e "${GREEN}╔══════════════════════════════════════════════════════════════════════╗${NC}"
-    echo -e "${GREEN}║  ✅ ${DISPLAY_NAME} deployment completed successfully!               ║${NC}"
+    echo -e "${GREEN}║          ✅ Speakasap deployment completed successfully!             ║${NC}"
     echo -e "${GREEN}╚══════════════════════════════════════════════════════════════════════╝${NC}"
     echo ""
     echo "The speakasap application has been deployed using blue/green deployment."
@@ -154,7 +154,7 @@ if "$DEPLOY_SCRIPT" "$SERVICE_NAME"; then
 else
     echo ""
     echo -e "${RED}╔══════════════════════════════════════════════════════════════════════╗${NC}"
-    echo -e "${RED}║  ❌ ${DISPLAY_NAME} deployment failed!                                ║${NC}"
+    echo -e "${RED}║                  ❌ Speakasap deployment failed!                     ║${NC}"
     echo -e "${RED}╚══════════════════════════════════════════════════════════════════════╝${NC}"
     echo ""
     echo "Please check the error messages above and:"
