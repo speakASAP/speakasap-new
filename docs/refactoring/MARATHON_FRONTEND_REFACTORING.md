@@ -7,6 +7,8 @@
 
 **Document structure:** § Step-by-step implementation plan (execute in order) → § Prerequisites → § Phases 1–2 detail → § Verification & rollback → § Reference (URL mapping, pages, functionality, reports/tests).
 
+**Legacy UI parity:** To make the new marathon frontend look exactly like the legacy marathon in speakasap-portal, use the dedicated plan: [MARATHON_LEGACY_UI_REFACTOR_PLAN.md](./MARATHON_LEGACY_UI_REFACTOR_PLAN.md).
+
 ---
 
 ## Problem

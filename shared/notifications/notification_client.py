@@ -26,6 +26,10 @@ NOTIFICATION_SERVICE_TIMEOUT = int(os.getenv('NOTIFICATION_SERVICE_TIMEOUT', '10
 # Retries on timeout/connection (same timeout each time; avoids failing on transient slowness)
 NOTIFICATION_SERVICE_SEND_RETRIES = int(os.getenv('NOTIFICATION_SERVICE_SEND_RETRIES', '2'))
 
+# Optional static Bearer token for service-to-service auth against notifications-microservice.
+# When set, all outgoing requests will include Authorization: Bearer <token>.
+NOTIFICATION_SERVICE_AUTH_TOKEN = os.getenv('NOTIFICATION_SERVICE_AUTH_TOKEN', '').strip()
+
 
 class NotificationClient(object):
     """Client for sending notifications via notifications-microservice"""
@@ -106,11 +110,15 @@ class NotificationClient(object):
                            request_id, attempt, max_attempts, self.timeout)
                 request_start = time.time()
 
+                headers = {'Content-Type': 'application/json'}
+                if NOTIFICATION_SERVICE_AUTH_TOKEN:
+                    headers['Authorization'] = 'Bearer {0}'.format(NOTIFICATION_SERVICE_AUTH_TOKEN)
+
                 response = requests.post(
                     url,
                     json=payload,
                     timeout=self.timeout,
-                    headers={'Content-Type': 'application/json'}
+                    headers=headers
                 )
 
                 request_duration = time.time() - request_start
@@ -179,10 +187,14 @@ class NotificationClient(object):
         url = '{}/notifications/status/{}'.format(self.base_url, notification_id)
         
         try:
+            headers = {'Content-Type': 'application/json'}
+            if NOTIFICATION_SERVICE_AUTH_TOKEN:
+                headers['Authorization'] = 'Bearer {0}'.format(NOTIFICATION_SERVICE_AUTH_TOKEN)
+
             response = requests.get(
                 url,
                 timeout=self.timeout,
-                headers={'Content-Type': 'application/json'}
+                headers=headers
             )
             response.raise_for_status()
             result = response.json()
@@ -238,11 +250,15 @@ class NotificationClient(object):
         url = '{}/notifications/send'.format(self.base_url)
 
         try:
+            headers = {'Content-Type': 'application/json'}
+            if NOTIFICATION_SERVICE_AUTH_TOKEN:
+                headers['Authorization'] = 'Bearer {0}'.format(NOTIFICATION_SERVICE_AUTH_TOKEN)
+
             response = requests.post(
                 url,
                 json=payload,
                 timeout=self.timeout,
-                headers={'Content-Type': 'application/json'}
+                headers=headers
             )
             response.raise_for_status()
             result = response.json()
