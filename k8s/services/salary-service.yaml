@@ -33,15 +33,9 @@ spec:
           ports:
             - containerPort: 4212
               name: http
-          env:
-            # F1 step 2: use the dedicated logging credential instead of falling back to the
-            # shared JWT_TOKEN. remote-logger.ts reads LOGGING_SERVICE_TOKEN || JWT_TOKEN;
-            # without this the shared token is this service's only logging credential.
-            - name: LOGGING_SERVICE_TOKEN
-              valueFrom:
-                secretKeyRef:
-                  name: logging-ingest-credentials
-                  key: LOGGING_SERVICE_TOKEN
+          # LOGGING_SERVICE_TOKEN comes from this service's ExternalSecret
+          # (per-pair RS256). Do not reintroduce logging-ingest-credentials —
+          # that shared static non-JWT floods Auth with alg=none rejects.
           envFrom:
             - configMapRef:
                 name: speakasap-salary-config
@@ -184,3 +178,9 @@ spec:
       remoteRef:
         key: secret/prod/speakasap/education
         property: INTERNAL_API_TOKEN
+    # Per-pair RS256 ingest: svc-<deploy>--logging-microservice@internal.alfares.cz
+    # role internal:logging-microservice:ingest.
+    - secretKey: LOGGING_SERVICE_TOKEN
+      remoteRef:
+        key: secret/prod/speakasap/salary
+        property: LOGGING_SERVICE_TOKEN
