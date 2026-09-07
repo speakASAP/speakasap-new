@@ -7,7 +7,11 @@ metadata:
     app: speakasap
     managed-by: k8s-migration
 spec:
-  replicas: 1
+  # Scaled out: this pod is a second copy of api-gateway with SERVICE_NAME=speakasap
+  # and no ingest credential. Ingress and clients use speakasap-api-gateway:4210.
+  # It was POSTing unauthenticated logs (log_ingest_rejected missing_credential)
+  # and keeping LogIngestStale firing against leftover PVC files.
+  replicas: 0
   selector:
     matchLabels:
       app: speakasap
