@@ -29,9 +29,6 @@ export class SalaryClientService {
 
   async fetchPeriodSalaryTotals(month: string): Promise<SalaryPeriodTotalsResponse> {
     const token = getOutboundInternalToken();
-    if (!token) {
-      throw new Error('Outbound internal token not configured');
-    }
     const q = new URLSearchParams({ month });
     const url = `${this.baseUrl()}/api/v1/internal/financial/period-salary-totals?${q.toString()}`;
     const controller = new AbortController();

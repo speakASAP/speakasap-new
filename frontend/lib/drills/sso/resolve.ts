@@ -29,31 +29,17 @@ const LEGACY_SYSTEM = 'speakasap-portal';
 const RESOLVE_TIMEOUT_MS = 5000;
 
 /**
- * Prefers AUTH_SERVICE_TOKEN (RS256). Static INTERNAL_SERVICE_TOKEN only while
- * auth still accepts it. See SERVICE_IDENTITY_CONSUMER_STANDARD.md.
+ * Auth-issued per-pair RS256 only (`AUTH_SERVICE_TOKEN` as Bearer).
+ * See auth-microservice/docs/SERVICE_IDENTITY_CONSUMER_STANDARD.md.
  */
 function buildAuthServiceHeaders(): Record<string, string> {
   const jwt = (process.env.AUTH_SERVICE_TOKEN || '').trim();
-  if (jwt) {
-    return { Authorization: `Bearer ${jwt}` };
-  }
-
-  const staticToken = (process.env.INTERNAL_SERVICE_TOKEN || '').trim();
-  if (!staticToken) {
+  if (!jwt) {
     throw new Error(
-      'AUTH_SERVICE_TOKEN (RS256) or INTERNAL_SERVICE_TOKEN required for auth SSO calls',
+      'AUTH_SERVICE_TOKEN (Auth-minted RS256) required for auth SSO calls',
     );
   }
-
-  // eslint-disable-next-line no-console
-  console.error(
-    '[sso/resolve] AUTH_SERVICE_TOKEN unset; using legacy static internal token as speakasap-frontend',
-  );
-
-  return {
-    'x-internal-service-token': staticToken,
-    'x-service-name': 'speakasap-frontend',
-  };
+  return { Authorization: `Bearer ${jwt}` };
 }
 
 interface SsoClaims {

@@ -2,46 +2,18 @@ import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import type { AuthContextUser } from '../shared/auth.types';
 
 /**
- * How this service identifies itself on the legacy static path
- * (`TRUSTED_INTERNAL_SERVICES`). Not the K8s deployment name
- * (`speakasap-education`) — the allowlist is keyed on caller identity.
- * Unused once AUTH_SERVICE_TOKEN (RS256) is presented.
- */
-const AUTH_CALLER_NAME = 'education-service';
-
-/**
  * Headers for auth-microservice internal routes.
- *
- * Prefers the per-pair Auth-issued RS256 JWT (`AUTH_SERVICE_TOKEN`) as
- * `Authorization: Bearer`. Falls back to the shared static token only while
- * auth still accepts it (`ALLOW_INTERNAL_STATIC_TOKEN` unset). Static fallback
- * logs at error so the exit condition is visible — not a permanent path.
+ * Auth-issued per-pair RS256 only (`AUTH_SERVICE_TOKEN` as Bearer).
+ * See auth-microservice/docs/SERVICE_IDENTITY_CONSUMER_STANDARD.md.
  */
-export function buildAuthServiceHeaders(
-  callerName: string = AUTH_CALLER_NAME,
-): Record<string, string> {
+export function buildAuthServiceHeaders(): Record<string, string> {
   const jwt = (process.env.AUTH_SERVICE_TOKEN || '').trim();
-  if (jwt) {
-    return { Authorization: `Bearer ${jwt}` };
-  }
-
-  const staticToken = (process.env.INTERNAL_SERVICE_TOKEN || '').trim();
-  if (!staticToken) {
+  if (!jwt) {
     throw new Error(
-      'AUTH_SERVICE_TOKEN (RS256) or INTERNAL_SERVICE_TOKEN required for auth internal calls',
+      'AUTH_SERVICE_TOKEN (Auth-minted RS256) required for auth internal calls',
     );
   }
-
-  // Loud: every static call is a migration debt item. Auth also WARNs on accept.
-  // eslint-disable-next-line no-console
-  console.error(
-    `[auth-client] AUTH_SERVICE_TOKEN unset; using legacy static internal token as ${callerName}`,
-  );
-
-  return {
-    'x-internal-service-token': staticToken,
-    'x-service-name': callerName,
-  };
+  return { Authorization: `Bearer ${jwt}` };
 }
 
 @Injectable()
@@ -81,7 +53,7 @@ export class AuthClientService {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...buildAuthServiceHeaders(AUTH_CALLER_NAME),
+          ...buildAuthServiceHeaders(),
         },
         body: JSON.stringify({ system: 'speakasap-portal', legacyUserIds }),
         signal: controller.signal,

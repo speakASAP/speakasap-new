@@ -6,6 +6,7 @@ const REQUIRED_ENV = [
   'LOGGING_SERVICE_API_PATH',
   'LOGGING_SERVICE_TIMEOUT',
   'AUTH_SERVICE_TIMEOUT',
+  'NOTIFICATION_TO_USER_SERVICE_TOKEN',
 ];
 
 export function validateEnv(): void {

@@ -50,22 +50,27 @@ Each SpeakASAP service owns its own PostgreSQL database (speakasap_*_db). paymen
 - Unauthenticated requests to protected routes are rejected.
 - For machine service identity, follow the sole canonical [`SERVICE_IDENTITY_CONSUMER_STANDARD.md`](../../../auth-microservice/docs/SERVICE_IDENTITY_CONSUMER_STANDARD.md). It is not reproduced here.
 
-**Known non-conformance — do not copy or extend.** The two bullets above cover the human lane. Service-to-service calls behind the gateway do not meet the standard: every *intra-SpeakASAP* internal hop is gated by a static shared token, with no Auth-issued per-pair principal and no `internal:<target>:<role>` claim.
+**Service identity (intra-SpeakASAP).** Receivers use `InternalAuthGuard` /
+`JwtOrInternalGuard`: Authorization Bearer validated via
+`AUTH_SERVICE_URL/auth/validate` with explicit `@Roles`
+(`internal:<target>:<role>`). Gateway second hop stamps
+`GATEWAY_TO_<SERVICE>_TOKEN`. Static `INTERNAL_API_TOKEN` /
+`FINANCIAL_INTERNAL_API_TOKEN` / `INTERNAL_API_KEY` compares on the listed
+guards are deleted.
 
-SpeakASAP → **auth-microservice** is a separate lane and is migrating: callers prefer `Authorization: Bearer` via `AUTH_SERVICE_TOKEN` (roles `legacy-lookup`, `sso-handoff`, `speakasap-teacher-grant`) with static fallback until Vault fill and authenticated-call proof. That does not make the intra-SpeakASAP hops compliant.
+Remaining non-conformance (do not extend):
+- financial-service **outbound** to payment/salary/course still sends
+  `X-Internal-Token` until those receivers migrate.
+- content-service internal routes still rely on gateway entry auth only
+  (no service-side InternalAuthGuard yet).
 
-| Service | Guard | Credential | Header |
-| --- | --- | --- | --- |
-| `financial-service` | `src/auth/internal-token.guard.ts` | `FINANCIAL_INTERNAL_API_TOKEN` | `x-internal-token` + `x-service-name` |
-| `user-service` | `src/auth/internal-token.guard.ts` | `INTERNAL_API_TOKEN` | `x-internal-token` + `x-service-name` |
-| `education-service` | `src/auth/internal-token.guard.ts` | `EDUCATION_SERVICE_INTERNAL_TOKEN` / `INTERNAL_API_TOKEN` | `x-internal-token` + `x-service-name` |
-| `notification-service` | `src/auth/internal-token.guard.ts`, `jwt-or-internal.guard.ts` | `INTERNAL_API_TOKEN` | `x-internal-token` |
-| `certification-service` | `src/auth/internal-api-key.guard.ts` | `INTERNAL_API_KEY` | `x-internal-api-key` |
-| `api-gateway` | `src/proxy/internal-hop.ts` | `INTERNAL_API_TOKEN` / `GATEWAY_INTERNAL_API_TOKEN` | re-stamps `x-internal-token` |
+Gateway **entry** hop for `/api/v1/internal/*` is Auth RS256 Bearer →
+`/auth/validate` with `internal:speakasap-api-gateway:*` only (not any
+`internal:*`). Static `GATEWAY_INTERNAL_API_TOKEN` / `x-internal-token` are
+deleted.
 
-A shared static token is not revocable per caller, and a caller-supplied `x-service-name` is not proof of identity — both are prohibited by the standard above. Several of these services share one `INTERNAL_API_TOKEN` value, so a single leaked secret impersonates every caller.
-
-That these guards mirror each other is a record of how the drift spread, not a local convention to follow. Do not add a new service or route to this pattern; the fix is per-pair Auth-issued RS256 credentials. The presence of these guards is not evidence that service identity is satisfied.
+SpeakASAP → **auth-microservice** callers use `AUTH_SERVICE_TOKEN` (RS256) only —
+do not reintroduce static tokens on that lane.
 
 ## synchronous dependencies
 

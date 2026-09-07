@@ -63,21 +63,64 @@ describe('GatewayAuthGuard — preserved bypasses', () => {
     );
   });
 
-  it('still gates /api/v1/internal on the internal token, not on a role', async () => {
-    process.env.GATEWAY_INTERNAL_API_TOKEN = 'secret-internal';
+  it('rejects /api/v1/internal without a bearer (no static entry-token fallback)', async () => {
     await expect(
       guard.canActivate(
-        ctxFor(reqFor('GET', '/api/v1/internal/drill-items/search', { 'x-internal-token': 'secret-internal' })),
+        ctxFor(
+          reqFor('GET', '/api/v1/internal/drill-items/search', {
+            'x-api-key': 'secret-internal',
+          }),
+        ),
       ),
-    ).resolves.toBe(true);
-    await expect(
-      guard.canActivate(ctxFor(reqFor('GET', '/api/v1/internal/drill-items/search', { 'x-internal-token': 'wrong' }))),
-    ).rejects.toBeInstanceOf(ForbiddenException);
+    ).rejects.toBeInstanceOf(UnauthorizedException);
+    expect(auth.validateAccessToken).not.toHaveBeenCalled();
   });
 
   it('rejects a missing bearer token on a normal route', async () => {
     await expect(guard.canActivate(ctxFor(reqFor('GET', '/api/v1/lessons')))).rejects.toBeInstanceOf(
       UnauthorizedException,
+    );
+  });
+});
+
+describe('GatewayAuthGuard — /api/v1/internal Auth RS256 entry', () => {
+  it('admits a JWT with internal:speakasap-api-gateway:*', async () => {
+    const { guard, auth } = guardReturning(
+      userWith(['internal:speakasap-api-gateway:proxy']),
+    );
+    const req = reqFor('GET', '/api/v1/internal/drill-items/search', BEARER);
+    await expect(guard.canActivate(ctxFor(req))).resolves.toBe(true);
+    expect(auth.validateAccessToken).toHaveBeenCalledWith('token-abc');
+    expect((req as { serviceActor?: { serviceName: string; authMethod: string } }).serviceActor).toEqual({
+      type: 'service',
+      serviceName: 'user-1',
+      authMethod: 'auth-rs256',
+    });
+  });
+
+  it('rejects another service internal:* role at gateway entry', async () => {
+    const { guard } = guardReturning(userWith(['internal:education-service:drill-read']));
+    await expect(
+      guard.canActivate(ctxFor(reqFor('GET', '/api/v1/internal/drill-assignments/x', BEARER))),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it('forbids a valid human JWT with no gateway internal role', async () => {
+    const { guard } = guardReturning(userWith(['app:speakasap:user']));
+    await expect(
+      guard.canActivate(ctxFor(reqFor('GET', '/api/v1/internal/drill-items/search', BEARER))),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it('never trusts x-service-name as identity', async () => {
+    const { guard } = guardReturning(userWith(['internal:speakasap-api-gateway:proxy']));
+    const req = reqFor('GET', '/api/v1/internal/salary/x', {
+      ...BEARER,
+      'x-service-name': 'spoofed-caller',
+    });
+    await expect(guard.canActivate(ctxFor(req))).resolves.toBe(true);
+    expect((req as { serviceActor?: { serviceName: string } }).serviceActor?.serviceName).toBe(
+      'user-1',
     );
   });
 });

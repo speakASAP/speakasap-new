@@ -60,7 +60,11 @@ def main() -> int:
         and "Missing bearer token" in guard
         and guard.find("req.method === 'GET'") < guard.find("req.headers.authorization"),
         "noBroadSevenAnonymousMethods": not any(snippet in guard for snippet in ["req.method !== 'POST'", "['GET', 'POST']", '["GET", "POST"]']),
-        "internalRoutesStillTokenProtected": "pathname.startsWith('/api/v1/internal')" in guard and "GATEWAY_INTERNAL_API_TOKEN" in guard,
+        "internalRoutesRequireAuthServiceJwt": "pathname.startsWith('/api/v1/internal')" in guard
+        and "activateInternalService" in guard
+        and "hasInternalServiceRole" in guard
+        and "GATEWAY_INTERNAL_API_TOKEN" not in guard
+        and "x-internal-token" not in guard,
         "paymentWebhookExceptionRemainsPostOnly": "pathname.startsWith('/api/v1/webhooks/payments') && req.method === 'POST'" in guard,
         "frontendUsesGatewaySevenEndpoints": all(
             snippet in frontend

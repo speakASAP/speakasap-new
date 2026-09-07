@@ -12,7 +12,9 @@ import {
 } from '@nestjs/common';
 import { ContentClient } from './orchestration/content.client';
 import { TeacherAssignmentsService } from './teacher/teacher-assignments.service';
-import { InternalTokenGuard } from '../auth/internal-token.guard';
+import { InternalAuthGuard } from '../auth/internal-token.guard';
+import { Roles } from '../auth/roles.decorator';
+import { EDUCATION_SERVICE_INTERNAL_ROLE } from '../auth/roles.constants';
 import { DrillAssignmentsService } from './runner/assignments.service';
 import {
   InternalLessonAssignmentsResponse,
@@ -23,12 +25,13 @@ import {
 /**
  * Contract C8 — the transitional endpoints the legacy portal (Track J) reads.
  *
- * Behind `InternalTokenGuard`, not the JWT guard: the caller is the portal
- * itself, a service, not an end user. These return other people's assignment
- * data by id, so they must never be reachable with an ordinary bearer token.
+ * Behind `InternalAuthGuard` (Auth RS256 + @Roles), not the human JWT guard:
+ * the caller is a service principal. These return other people's assignment
+ * data by id, so they must never be reachable with an ordinary user bearer.
  */
 @Controller('internal/drill-assignments')
-@UseGuards(InternalTokenGuard)
+@UseGuards(InternalAuthGuard)
+@Roles(EDUCATION_SERVICE_INTERNAL_ROLE)
 export class InternalDrillsController {
   private readonly logger = new Logger(InternalDrillsController.name);
 
@@ -59,11 +62,9 @@ export class InternalDrillsController {
   /**
    * Approve a set and deliver it, on behalf of the teacher the portal names.
    *
-   * `InternalTokenGuard` proves the portal is calling — it is one shared service
-   * credential and says nothing about which teacher is acting. `teacherId` therefore
-   * comes in the body, and the service checks that the teacher actually owns what they
-   * are touching. Without that check, anything holding the internal token could act as
-   * any teacher.
+   * `InternalAuthGuard` proves a service principal is calling — not which teacher.
+   * `teacherId` therefore comes in the body, and the service checks ownership.
+   * Outbound content calls use EDUCATION_TO_CONTENT_SERVICE_TOKEN (Auth RS256).
    */
   @Post('sets/:setUuid/approve')
   @HttpCode(HttpStatus.OK)
@@ -72,7 +73,10 @@ export class InternalDrillsController {
     @Body() body: { teacherId?: number },
   ): Promise<{ delivered: number }> {
     const teacherId = numeric(String(body?.teacherId ?? ''), 'teacherId');
-    const token = process.env.INTERNAL_API_TOKEN ?? '';
+    const token = (process.env.EDUCATION_TO_CONTENT_SERVICE_TOKEN || '').trim();
+    if (!token) {
+      throw new BadRequestException('EDUCATION_TO_CONTENT_SERVICE_TOKEN is unset');
+    }
 
     this.logger.log(`Portal approve: set=${setUuid} teacher=${teacherId}`);
     await this.sets.approveSet(setUuid, teacherId, token);

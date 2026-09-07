@@ -134,10 +134,10 @@ describe('InternalDrillsController', () => {
     h = harness();
   });
 
-  it('is declared behind InternalTokenGuard', () => {
+  it('is declared behind InternalAuthGuard', () => {
     const guards = Reflect.getMetadata('__guards__', InternalDrillsController) ?? [];
     const names = guards.map((g: any) => g.name ?? g.constructor?.name);
-    expect(names).toContain('InternalTokenGuard');
+    expect(names).toContain('InternalAuthGuard');
   });
 
   // Track J renders the legacy dashboard from this flag. If it disagrees with
@@ -525,11 +525,16 @@ describe('InternalDrillsController write routes', () => {
 
   it('approves and assigns for the teacher the portal names', async () => {
     const h = harness();
+    process.env.EDUCATION_TO_CONTENT_SERVICE_TOKEN = 'rs256-edu-to-content';
 
     await h.internal.approve('s-1', { teacherId: 182 } as any);
 
-    expect(h.sets.approveSet).toHaveBeenCalledWith('s-1', 182, expect.anything());
-    expect(h.teacherAssignments.assignApprovedSet).toHaveBeenCalledWith('s-1', 182, expect.anything());
+    expect(h.sets.approveSet).toHaveBeenCalledWith('s-1', 182, 'rs256-edu-to-content');
+    expect(h.teacherAssignments.assignApprovedSet).toHaveBeenCalledWith(
+      's-1',
+      182,
+      'rs256-edu-to-content',
+    );
   });
 });
 });

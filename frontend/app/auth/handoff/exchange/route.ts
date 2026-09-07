@@ -18,26 +18,12 @@ import { resolveSsoToken } from '@/lib/drills/sso/resolve';
 
 function buildAuthServiceHeaders(): Record<string, string> {
   const jwt = (process.env.AUTH_SERVICE_TOKEN || '').trim();
-  if (jwt) {
-    return { Authorization: `Bearer ${jwt}` };
-  }
-
-  const staticToken = (process.env.INTERNAL_SERVICE_TOKEN || '').trim();
-  if (!staticToken) {
+  if (!jwt) {
     throw new Error(
-      'AUTH_SERVICE_TOKEN (RS256) or INTERNAL_SERVICE_TOKEN required for auth session mint',
+      'AUTH_SERVICE_TOKEN (Auth-minted RS256) required for auth session mint',
     );
   }
-
-  // eslint-disable-next-line no-console
-  console.error(
-    '[handoff/exchange] AUTH_SERVICE_TOKEN unset; using legacy static internal token as speakasap-frontend',
-  );
-
-  return {
-    'x-internal-service-token': staticToken,
-    'x-service-name': 'speakasap-frontend',
-  };
+  return { Authorization: `Bearer ${jwt}` };
 }
 
 export async function POST(request: Request) {

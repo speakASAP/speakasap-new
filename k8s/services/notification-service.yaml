@@ -105,7 +105,7 @@ data:
   NOTIFICATION_SERVICE_URL: "http://speakasap-notification:4209"
   # UserLookupService resolves a dispatch userId to an email address against
   # user-service. Without it every dispatch 400s with "Configure USER_SERVICE_URL
-  # and INTERNAL_API_TOKEN to resolve userId to email", regardless of auth.
+  # and NOTIFICATION_TO_USER_SERVICE_TOKEN to resolve userId to email", regardless of auth.
   USER_SERVICE_URL: "http://speakasap-user:4207"
   # Delivery upstream — notifications-microservice, a DIFFERENT service from this
   DB_HOST: "db-server-postgres"
@@ -165,14 +165,12 @@ spec:
       remoteRef:
         key: secret/prod/speakasap/notification
         property: NOTIFICATION_DATABASE_URL
-    # Service-to-service auth for `/api/v1/dispatch/email*` (InternalTokenGuard).
-    # Read from the gateway path deliberately: this is the one shared ecosystem
-    # token that education-service already sends, so both sides must resolve the
-    # same value. A per-service copy here would drift and 401 every drill email.
-    - secretKey: INTERNAL_API_TOKEN
+    # Auth RS256 pair JWT for user-service InternalAuthGuard
+    # (NOTIFICATION_TO_USER_SERVICE_TOKEN → internal:user-service:internal).
+    - secretKey: NOTIFICATION_TO_USER_SERVICE_TOKEN
       remoteRef:
-        key: secret/prod/speakasap/gateway
-        property: INTERNAL_API_TOKEN
+        key: secret/prod/speakasap/notification
+        property: NOTIFICATION_TO_USER_SERVICE_TOKEN
     # Bearer token for notifications-microservice's JwtRolesGuard. Single source of
     # truth: notifications-microservice reads this very same Vault key as
     # SPEAKASAP_NOTIFICATIONS_SERVICE_TOKEN, matching how cliplot and invoices are

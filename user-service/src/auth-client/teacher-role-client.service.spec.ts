@@ -8,14 +8,13 @@ describe('TeacherRoleClientService', () => {
     jest.resetAllMocks();
     process.env.AUTH_SERVICE_URL = 'http://auth-microservice:3370';
     process.env.AUTH_SERVICE_TIMEOUT = '5000';
-    process.env.INTERNAL_SERVICE_TOKEN = 'test-internal-token';
-    process.env.SERVICE_NAME = 'user-service';
-    delete process.env.AUTH_SERVICE_TOKEN;
+    process.env.AUTH_SERVICE_TOKEN = 'rs256-service-jwt';
+    delete process.env.INTERNAL_SERVICE_TOKEN;
     global.fetch = fetchMock as unknown as typeof fetch;
     service = new TeacherRoleClientService();
   });
 
-  it('posts to the scoped teacher grant endpoint with service identity headers', async () => {
+  it('posts to the scoped teacher grant endpoint with Bearer only', async () => {
     fetchMock.mockResolvedValue({
       ok: true,
       status: 200,
@@ -28,24 +27,17 @@ describe('TeacherRoleClientService', () => {
     const [url, init] = fetchMock.mock.calls[0];
     expect(url).toBe('http://auth-microservice:3370/internal/roles/speakasap/teacher/auth-1');
     expect(init.method).toBe('POST');
-    expect(init.headers['x-internal-service-token']).toBe('test-internal-token');
-    expect(init.headers['x-service-name']).toBe('user-service');
+    expect(init.headers.Authorization).toBe('Bearer rs256-service-jwt');
+    expect(init.headers['x-internal-service-token']).toBeUndefined();
+    expect(init.headers['x-service-name']).toBeUndefined();
     expect(result).toEqual({ granted: true });
   });
 
-  it('prefers Authorization Bearer when AUTH_SERVICE_TOKEN is set', async () => {
-    process.env.AUTH_SERVICE_TOKEN = 'rs256-service-jwt';
-    fetchMock.mockResolvedValue({
-      ok: true,
-      status: 200,
-      json: async () => ({ userId: 'auth-1', role: 'app:speakasap:teacher', granted: true }),
-    });
+  it('throws when AUTH_SERVICE_TOKEN is unset', async () => {
+    delete process.env.AUTH_SERVICE_TOKEN;
 
-    await service.grantTeacherRole('auth-1');
-
-    const headers = fetchMock.mock.calls[0][1].headers;
-    expect(headers.Authorization).toBe('Bearer rs256-service-jwt');
-    expect(headers['x-internal-service-token']).toBeUndefined();
+    await expect(service.grantTeacherRole('auth-1')).rejects.toThrow(/AUTH_SERVICE_TOKEN/);
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it('reports granted:false when the role was already assigned', async () => {

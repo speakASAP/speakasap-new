@@ -37,7 +37,7 @@ describe('resolveUpstreamBaseUrl — drill routes', () => {
   // and course-vocabulary reveals a course's known-word baseline. The gateway's auth
   // guard only checks for a valid token, not a role, so a public prefix would let any
   // authenticated student read drill answers. Both must resolve to content-service
-  // ONLY under /api/v1/internal (which requires the x-internal-token header), and
+  // ONLY under /api/v1/internal (Auth RS256 + internal:speakasap-api-gateway:*), and
   // must NOT resolve under their old public prefixes at all.
   it('routes internal drill-items search to content-service, NOT user-service', () => {
     expect(resolveUpstreamBaseUrl('/api/v1/internal/drill-items/search')).toBe('http://content:4201');

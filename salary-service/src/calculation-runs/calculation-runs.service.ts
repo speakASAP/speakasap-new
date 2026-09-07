@@ -87,10 +87,14 @@ export class CalculationRunsService {
       );
     }
 
-    const internal =
-      process.env.EDUCATION_SERVICE_INTERNAL_TOKEN ||
-      process.env.INTERNAL_API_TOKEN ||
-      '';
+    const internal = (process.env.SALARY_TO_EDUCATION_SERVICE_TOKEN || '').trim();
+    if (!internal) {
+      throw salaryHttpException(
+        HttpStatus.SERVICE_UNAVAILABLE,
+        'DEPENDENCY_UNAVAILABLE',
+        'SALARY_TO_EDUCATION_SERVICE_TOKEN is unset',
+      );
+    }
     let aggregateResult: PeriodAggregateResult;
     try {
       aggregateResult = await this.education.fetchPeriodAggregates(

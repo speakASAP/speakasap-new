@@ -21,8 +21,8 @@ export const ROUTES: { prefix: string; envKey: string }[] = [
   // and a course's known-vocabulary baseline (course-vocabulary) — Task A.8's
   // review found the gateway's auth guard checks for a valid token but not a
   // role, so any authenticated student could otherwise read drill answers.
-  // Moving them under /api/v1/internal makes the gateway require the
-  // x-internal-token header. Must stay above '/api/v1/internal' below, or they
+  // Moving them under /api/v1/internal makes the gateway require Auth RS256 with
+  // internal:speakasap-api-gateway:*. Must stay above '/api/v1/internal' below, or they
   // silently resolve to user-service and 404.
   { prefix: '/api/v1/internal/drill-items', envKey: 'CONTENT_SERVICE_URL' },
   { prefix: '/api/v1/internal/course-vocabulary', envKey: 'CONTENT_SERVICE_URL' },

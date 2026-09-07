@@ -161,13 +161,8 @@ spec:
       remoteRef:
         key: secret/prod/speakasap/financial
         property: FINANCIAL_DATABASE_URL
-    - secretKey: FINANCIAL_INTERNAL_API_TOKEN
-      remoteRef:
-        key: secret/prod/speakasap/financial
-        property: FINANCIAL_INTERNAL_API_TOKEN
-    # Outbound internal-hop token. Previously four plaintext copies of this same
-    # value sat in the ConfigMap above (and in git). financial-service falls back
-    # across these names, so one Vault-sourced property serves all four.
+    # Outbound X-Internal-Token to payment/salary/course (receivers not yet on Auth RS256).
+    # Inbound financial InternalAuthGuard uses Authorization Bearer from callers.
     - secretKey: INTERNAL_API_TOKEN
       remoteRef:
         key: secret/prod/speakasap/financial

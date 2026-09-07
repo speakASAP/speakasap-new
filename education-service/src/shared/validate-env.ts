@@ -9,7 +9,11 @@ export const REQUIRED_ENV = [
   'AUTH_SERVICE_TIMEOUT',
   'DEFAULT_PAGE_SIZE',
   'MAX_PAGE_SIZE',
+  // Gateway first-hop entry credential for /api/v1/internal/* (GatewayAuthGuard).
+  // Distinct from Auth RS256 pair JWTs used on service InternalAuthGuard routes.
   'INTERNAL_API_TOKEN',
+  'EDUCATION_TO_NOTIFICATION_SERVICE_TOKEN',
+  'EDUCATION_TO_CONTENT_SERVICE_TOKEN',
   'AI_SERVICE_URL',
   'DRILL_GENERATION_MODEL_TIER',
 ];

@@ -1,44 +1,34 @@
 import {
   CanActivate,
   ExecutionContext,
+  ForbiddenException,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
 import type { Request } from 'express';
 import { AuthClientService } from '../auth-client/auth-client.service';
-import { InternalTokenGuard } from './internal-token.guard';
+import { ROLES_KEY } from './roles.decorator';
 
 /**
- * Accepts either a user JWT or the shared internal service token.
+ * Accepts a human JWT or an Auth-issued service JWT (both via Bearer).
  *
- * Dispatch has two legitimate kinds of caller. The gateway exposes
- * `/api/v1/dispatch/email*` to user-facing traffic carrying a real JWT, while
- * education-service sends drill mail from a background hook that has no user in
- * scope and can only present `INTERNAL_API_TOKEN`. Requiring the JWT alone 401s
- * the latter; replacing it with the internal token alone would silently drop
- * authentication for the former.
+ * Dispatch has two legitimate callers: gateway user traffic with a human JWT,
+ * and education-service background hooks with a per-pair service JWT. Static
+ * INTERNAL_API_TOKEN / x-internal-token is deleted — not flag-gated.
  *
- * Presence of `x-internal-token` selects the service path — an explicit choice by
- * the caller, so a user request with a bad JWT can never fall through to the
- * weaker check.
- *
- * The JWT branch validates the token here rather than delegating to `JwtAuthGuard`.
- * That guard short-circuits to `true` on `@Public()`, and the dispatch controller
- * carries `@Public()` to get past the global `APP_GUARD` — delegating would hand
- * every unauthenticated request a free pass onto a route that sends email.
+ * Presence of an `internal:*` role selects the service path and requires @Roles.
+ * Human principals (no `internal:` role) follow the JWT path.
  */
 @Injectable()
 export class JwtOrInternalGuard implements CanActivate {
-  private readonly internal = new InternalTokenGuard();
-
-  constructor(private readonly authClient: AuthClientService) {}
+  constructor(
+    private readonly authClient: AuthClientService,
+    private readonly reflector: Reflector,
+  ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const req = context.switchToHttp().getRequest<Request>();
-    if (typeof req.headers['x-internal-token'] === 'string') {
-      return this.internal.canActivate(context);
-    }
-
     const header = req.headers.authorization;
     if (!header?.toLowerCase().startsWith('bearer ')) {
       throw new UnauthorizedException('Missing bearer token');
@@ -47,9 +37,29 @@ export class JwtOrInternalGuard implements CanActivate {
     if (!token) {
       throw new UnauthorizedException('Missing bearer token');
     }
+
     const user = await this.authClient.validateAccessToken(token);
     req.authUser = user;
     this.authClient.attachRequestContext(user);
+
+    const roles = Array.isArray(user.roles)
+      ? user.roles.filter((r): r is string => typeof r === 'string')
+      : [];
+    const isService = roles.some((r) => r.startsWith('internal:'));
+    if (!isService) {
+      return true;
+    }
+
+    const required = this.reflector.getAllAndOverride<{ roles: string[] }>(ROLES_KEY, [
+      context.getHandler(),
+      context.getClass(),
+    ]);
+    if (!required?.roles?.length) {
+      throw new ForbiddenException('Route is missing an authorization policy');
+    }
+    if (!required.roles.some((r) => roles.includes(r))) {
+      throw new ForbiddenException('Insufficient permissions');
+    }
     return true;
   }
 }

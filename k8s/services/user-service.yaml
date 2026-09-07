@@ -156,10 +156,6 @@ spec:
       remoteRef:
         key: secret/prod/speakasap/user
         property: DATABASE_URL
-    - secretKey: INTERNAL_API_TOKEN
-      remoteRef:
-        key: secret/prod/speakasap/user
-        property: INTERNAL_API_TOKEN
     # auth-microservice InternalServiceOrRoleGuard: prefer AUTH_SERVICE_TOKEN
     # (per-pair RS256). INTERNAL_SERVICE_TOKEN remains for the migration window.
     # Principal: svc-user-service--auth-microservice@internal.alfares.cz

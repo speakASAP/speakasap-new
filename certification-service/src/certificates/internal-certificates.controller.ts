@@ -1,9 +1,14 @@
 import { Body, Controller, Post, UseGuards } from '@nestjs/common';
-import { InternalApiKeyGuard } from '../auth/internal-api-key.guard';
+import { InternalAuthGuard } from '../auth/internal-api-key.guard';
+import { Roles } from '../auth/roles.decorator';
 import { CourseCertificatesService } from './course-certificates.service';
 import { EducationCertificatesService } from './education-certificates.service';
 
+export const CERTIFICATION_SERVICE_INTERNAL_ROLE = 'internal:certification-service:internal';
+
 @Controller('internal')
+@UseGuards(InternalAuthGuard)
+@Roles(CERTIFICATION_SERVICE_INTERNAL_ROLE)
 export class InternalCertificatesController {
   constructor(
     private readonly courseCertificates: CourseCertificatesService,
@@ -11,7 +16,6 @@ export class InternalCertificatesController {
   ) {}
 
   @Post('course-certificates/generate')
-  @UseGuards(InternalApiKeyGuard)
   async generateCourse(
     @Body()
     body: { studentCourseId: string; forceBase: boolean; ownerUserId?: string; certText?: string },
@@ -25,7 +29,6 @@ export class InternalCertificatesController {
   }
 
   @Post('education-certificates/generate')
-  @UseGuards(InternalApiKeyGuard)
   async generateEducation(
     @Body()
     body: {

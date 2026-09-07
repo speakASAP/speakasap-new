@@ -55,9 +55,6 @@ export class PaymentClientService {
     limit: number;
   }): Promise<SliceEnvelope<PaidOrderRow>> {
     const token = getOutboundInternalToken();
-    if (!token) {
-      throw new Error('Outbound internal token not configured');
-    }
     const q = new URLSearchParams();
     if (params.paidAfter) {
       q.set('paidAfter', params.paidAfter);
@@ -95,9 +92,6 @@ export class PaymentClientService {
     createdBefore?: string;
   }): Promise<SliceEnvelope<TransactionsRow>> {
     const token = getOutboundInternalToken();
-    if (!token) {
-      throw new Error('Outbound internal token not configured');
-    }
     const q = new URLSearchParams();
     if (params.cursor) {
       q.set('cursor', params.cursor);

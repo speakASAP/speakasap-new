@@ -75,7 +75,8 @@ describe('EducationClientService', () => {
       expect(url.searchParams.get('period')).toBe('2026-05');
       expect(url.searchParams.get('legacyPortalUserIds')).toBe('4210,4211');
       const headers = (fetchMock.mock.calls[0][1] as RequestInit).headers as Record<string, string>;
-      expect(headers['X-Internal-Token']).toBe('tok-internal');
+      expect(headers['X-Internal-Token']).toBeUndefined();
+      expect(headers['Authorization']).toBe('Bearer tok-internal');
     });
 
     it('omits the teacher filter when no teachers were requested', async () => {

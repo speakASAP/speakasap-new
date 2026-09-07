@@ -136,13 +136,10 @@ data:
   FRONTEND_URL: "https://speakasap.alfares.cz"
   CORS_ORIGIN: "https://speakasap.alfares.cz"
 ---
-# Internal-route credentials for the gateway (Track J).
-#
-# GATEWAY_INTERNAL_API_TOKEN is what a caller must present on x-internal-token to use
-# /api/v1/internal/* from outside the cluster. INTERNAL_API_TOKEN is what the gateway
-# re-stamps onto the request for the upstream hop, so a caller never holds the
-# upstream's own credential. Both guards read the same header name against different
-# values, which is why the swap in internal-hop.ts exists.
+# Second-hop Auth RS256 pair JWTs for /api/v1/internal/* (Track J).
+# Entry hop is Auth Bearer → /auth/validate with an internal:* role (no static
+# GATEWAY_INTERNAL_API_TOKEN). GATEWAY_TO_*_TOKEN are stamped as Authorization
+# Bearer on the gateway → upstream hop. See src/proxy/internal-hop.ts.
 apiVersion: external-secrets.io/v1
 kind: ExternalSecret
 metadata:
@@ -159,14 +156,35 @@ spec:
     name: speakasap-api-gateway-internal
     creationPolicy: Owner
   data:
-    - secretKey: GATEWAY_INTERNAL_API_TOKEN
+    # Second-hop Auth RS256 pair JWTs (gateway → upstream InternalAuthGuard).
+    - secretKey: GATEWAY_TO_USER_SERVICE_TOKEN
       remoteRef:
         key: secret/prod/speakasap/gateway
-        property: GATEWAY_INTERNAL_API_TOKEN
-    - secretKey: INTERNAL_API_TOKEN
+        property: GATEWAY_TO_USER_SERVICE_TOKEN
+    - secretKey: GATEWAY_TO_EDUCATION_SERVICE_TOKEN
       remoteRef:
         key: secret/prod/speakasap/gateway
-        property: INTERNAL_API_TOKEN
+        property: GATEWAY_TO_EDUCATION_SERVICE_TOKEN
+    - secretKey: GATEWAY_TO_CONTENT_SERVICE_TOKEN
+      remoteRef:
+        key: secret/prod/speakasap/gateway
+        property: GATEWAY_TO_CONTENT_SERVICE_TOKEN
+    - secretKey: GATEWAY_TO_FINANCIAL_SERVICE_TOKEN
+      remoteRef:
+        key: secret/prod/speakasap/gateway
+        property: GATEWAY_TO_FINANCIAL_SERVICE_TOKEN
+    - secretKey: GATEWAY_TO_PAYMENT_SERVICE_TOKEN
+      remoteRef:
+        key: secret/prod/speakasap/gateway
+        property: GATEWAY_TO_PAYMENT_SERVICE_TOKEN
+    - secretKey: GATEWAY_TO_SALARY_SERVICE_TOKEN
+      remoteRef:
+        key: secret/prod/speakasap/gateway
+        property: GATEWAY_TO_SALARY_SERVICE_TOKEN
+    - secretKey: GATEWAY_TO_COURSE_SERVICE_TOKEN
+      remoteRef:
+        key: secret/prod/speakasap/gateway
+        property: GATEWAY_TO_COURSE_SERVICE_TOKEN
     # Per-pair RS256 ingest: svc-<deploy>--logging-microservice@internal.alfares.cz
     # role internal:logging-microservice:ingest.
     - secretKey: LOGGING_SERVICE_TOKEN

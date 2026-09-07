@@ -1,23 +1,36 @@
 /**
- * Re-stamp `x-internal-token` for the second hop of an internal call.
+ * Stamp Authorization Bearer for the second hop of an internal call.
  *
- * ## Why this exists
+ * `/api/v1/internal/*` passes two auth boundaries:
+ * - gateway `GatewayAuthGuard` (caller Auth RS256 Bearer → `/auth/validate` with
+ *   an `internal:*` service role);
+ * - upstream InternalAuthGuard (Auth RS256 Bearer, per SERVICE_IDENTITY_CONSUMER_STANDARD).
  *
- * `/api/v1/internal/*` passes through two guards that read the **same header** against
- * **different** expected values:
- *
- * - the gateway's own `GatewayAuthGuard` checks `GATEWAY_INTERNAL_API_TOKEN`;
- * - the upstream service's guard checks its `INTERNAL_API_TOKEN`.
- *
- * `buildForwardHeaders` copies request headers verbatim, so before this existed a caller
- * could only ever satisfy one of the two. Setting both to the same value would "work",
- * but then any caller allowed through the gateway holds a credential that also opens the
- * upstream services directly.
- *
- * Re-stamping keeps the two credentials separate: the caller proves itself to the
- * gateway, and the gateway proves itself to the upstream.
+ * Re-stamping swaps the caller's entry credential for the gateway→target pair JWT
+ * (`GATEWAY_TO_<SERVICE>_TOKEN`). Static entry tokens (`GATEWAY_INTERNAL_API_TOKEN`,
+ * `x-internal-token`) are deleted.
  */
+import { ROUTES } from './upstream-resolve';
+
 const INTERNAL_PREFIX = '/api/v1/internal/';
+
+export function gatewayToServiceTokenEnv(upstreamUrlEnvKey: string): string {
+  // USER_SERVICE_URL → GATEWAY_TO_USER_SERVICE_TOKEN
+  const base = upstreamUrlEnvKey.replace(/_URL$/, '');
+  return `GATEWAY_TO_${base}_TOKEN`;
+}
+
+export function resolveInternalHopTokenEnv(pathname: string): string | null {
+  for (const { prefix, envKey } of ROUTES) {
+    if (pathname === prefix || pathname.startsWith(`${prefix}/`)) {
+      if (!prefix.startsWith('/api/v1/internal')) {
+        return null;
+      }
+      return gatewayToServiceTokenEnv(envKey);
+    }
+  }
+  return null;
+}
 
 export function applyInternalHopToken(headers: Headers, pathname: string): void {
   // Prefix match with the trailing slash, so `/api/v1/internal-notes` is not treated as
@@ -26,14 +39,21 @@ export function applyInternalHopToken(headers: Headers, pathname: string): void 
     return;
   }
 
-  const upstreamToken = process.env.INTERNAL_API_TOKEN;
-  if (!upstreamToken) {
-    // Fail closed. Forwarding the caller's value is the exact confusion this function
-    // prevents, and an upstream rejects a missing header anyway — a 401 from the
-    // upstream is a clearer signal than a token that half-works.
-    headers.delete('x-internal-token');
-    return;
+  // Never forward the caller's static entry token as upstream identity.
+  headers.delete('x-internal-token');
+  headers.delete('x-internal-api-key');
+
+  const tokenEnv = resolveInternalHopTokenEnv(pathname);
+  if (!tokenEnv) {
+    headers.delete('authorization');
+    throw new Error(`No GATEWAY_TO_* token mapping for internal path ${pathname}`);
   }
 
-  headers.set('x-internal-token', upstreamToken);
+  const jwt = (process.env[tokenEnv] || '').trim();
+  if (!jwt) {
+    headers.delete('authorization');
+    throw new Error(`${tokenEnv} is unset; refuse internal hop to ${pathname}`);
+  }
+
+  headers.set('authorization', `Bearer ${jwt}`);
 }

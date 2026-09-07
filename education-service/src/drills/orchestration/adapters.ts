@@ -119,8 +119,7 @@ export class DrillIdentityResolverAdapter {
     try {
       // Deliberately NOT requestUpstream: that helper sends `x-internal-token`, the
       // api-gateway's convention, which is correct for content-service and ai-microservice
-      // but wrong for auth. Auth wants Authorization: Bearer (AUTH_SERVICE_TOKEN) or,
-      // during the migration window, x-internal-service-token.
+      // but wrong for auth. Auth wants Authorization: Bearer (AUTH_SERVICE_TOKEN) only.
       //
       // Sending the gateway's convention here 401'd every call, and because this resolver
       // fails closed, the teacher wizard rendered "Request failed with status 503" with an

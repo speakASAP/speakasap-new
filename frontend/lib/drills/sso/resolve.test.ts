@@ -49,7 +49,7 @@ beforeEach(() => {
   vi.unstubAllGlobals();
   vi.stubEnv('SPEAKASAP_PLATFORM_JWT_SECRET', SECRET);
   vi.stubEnv('AUTH_SERVICE_URL', 'http://auth.test');
-  vi.stubEnv('INTERNAL_SERVICE_TOKEN', 'internal-token');
+  vi.stubEnv('AUTH_SERVICE_TOKEN', 'rs256-service-jwt');
 });
 
 afterEach(() => {
@@ -138,7 +138,7 @@ describe('resolveSsoToken', () => {
     });
   });
 
-  it('sends the internal service headers auth\'s guard requires', async () => {
+  it('sends Authorization Bearer only', async () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValue({ ok: true, json: async () => ({ authUserId: 'u-1', provisioned: false }) });
@@ -149,9 +149,10 @@ describe('resolveSsoToken', () => {
     const [url, init] = fetchMock.mock.calls[0];
     expect(url).toBe('http://auth.test/internal/users/resolve-or-provision-legacy');
     expect(init.headers).toMatchObject({
-      'x-internal-service-token': 'internal-token',
-      'x-service-name': 'speakasap-frontend',
+      Authorization: 'Bearer rs256-service-jwt',
     });
+    expect(init.headers['x-internal-service-token']).toBeUndefined();
+    expect(init.headers['x-service-name']).toBeUndefined();
     expect(JSON.parse(init.body)).toEqual({
       system: 'speakasap-portal',
       legacyUserId: 310740,
@@ -161,19 +162,15 @@ describe('resolveSsoToken', () => {
     });
   });
 
-  it('prefers Authorization Bearer when AUTH_SERVICE_TOKEN is set', async () => {
-    vi.stubEnv('AUTH_SERVICE_TOKEN', 'rs256-service-jwt');
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValue({ ok: true, json: async () => ({ authUserId: 'u-1', provisioned: false }) });
+  it('FAILS CLOSED when AUTH_SERVICE_TOKEN is unset', async () => {
+    vi.stubEnv('AUTH_SERVICE_TOKEN', '');
+    const fetchMock = vi.fn();
     vi.stubGlobal('fetch', fetchMock);
 
-    await resolveSsoToken(validToken());
-
-    expect(fetchMock.mock.calls[0][1].headers).toMatchObject({
-      Authorization: 'Bearer rs256-service-jwt',
+    await expect(resolveSsoToken(validToken())).resolves.toEqual({
+      error: 'IDENTITY_UNRESOLVED',
     });
-    expect(fetchMock.mock.calls[0][1].headers['x-internal-service-token']).toBeUndefined();
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it('fails closed when the platform secret is not configured', async () => {

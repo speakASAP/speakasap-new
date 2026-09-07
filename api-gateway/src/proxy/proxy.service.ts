@@ -43,9 +43,9 @@ export class ProxyService {
 
     try {
       const headers = this.buildForwardHeaders(req);
-      // The gateway guard has already validated the caller against
-      // GATEWAY_INTERNAL_API_TOKEN. Swap in the upstream's own credential for the second
-      // hop so the caller never needs to hold it. See internal-hop.ts.
+      // GatewayAuthGuard already validated the caller (Auth RS256 + internal:*).
+      // Stamp Authorization Bearer from GATEWAY_TO_<SERVICE>_TOKEN for upstream
+      // InternalAuthGuard. See internal-hop.ts.
       applyInternalHopToken(headers, pathname);
       const body = await this.readRequestBody(req);
 

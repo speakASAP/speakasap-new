@@ -13,13 +13,13 @@ export class UserLookupService {
 
   async resolveNotificationTarget(authUserId: string, required: boolean): Promise<NotificationTarget> {
     const base = (process.env.USER_SERVICE_URL || '').replace(/\/$/, '');
-    const token = process.env.INTERNAL_API_TOKEN;
+    const token = (process.env.NOTIFICATION_TO_USER_SERVICE_TOKEN || '').trim();
     if (!base || !token) {
       if (required) {
         throw notificationHttpException(
           HttpStatus.BAD_REQUEST,
           'NOTIFICATION_VALIDATION_FAILED',
-          'Configure USER_SERVICE_URL and INTERNAL_API_TOKEN to resolve userId to email',
+          'Configure USER_SERVICE_URL and NOTIFICATION_TO_USER_SERVICE_TOKEN to resolve userId to email',
           {},
         );
       }
@@ -35,7 +35,7 @@ export class UserLookupService {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-internal-token': token,
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ authUserId }),
         signal: controller.signal,

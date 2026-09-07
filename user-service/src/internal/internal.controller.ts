@@ -1,5 +1,6 @@
 import { BadRequestException, Body, Controller, Get, Post, Query, UseGuards } from '@nestjs/common';
-import { InternalTokenGuard } from '../auth/internal-token.guard';
+import { InternalAuthGuard } from '../auth/internal-token.guard';
+import { Roles } from '../auth/roles.decorator';
 import { ManagersService } from '../managers/managers.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { StudentsService } from '../students/students.service';
@@ -7,6 +8,8 @@ import { TeachersService } from '../teachers/teachers.service';
 
 const MAX_BATCH = 30;
 
+/** Least-privilege service role for user-service internal routes. */
+export const USER_SERVICE_INTERNAL_ROLE = 'internal:user-service:internal';
 
 function parseCsvInts(raw: string | undefined): number[] {
   if (!raw || !raw.trim()) {
@@ -24,7 +27,8 @@ function parseCsvInts(raw: string | undefined): number[] {
 }
 
 @Controller('internal')
-@UseGuards(InternalTokenGuard)
+@UseGuards(InternalAuthGuard)
+@Roles(USER_SERVICE_INTERNAL_ROLE)
 export class InternalController {
   constructor(
     private readonly prisma: PrismaService,

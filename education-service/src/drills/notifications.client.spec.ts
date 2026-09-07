@@ -16,7 +16,7 @@ describe('NotificationsClientAdapter', () => {
     jest.resetAllMocks();
     global.fetch = fetchMock as any;
     process.env.NOTIFICATION_SERVICE_URL = 'http://speakasap-notification:4209';
-    process.env.INTERNAL_API_TOKEN = 'internal-secret';
+    process.env.EDUCATION_TO_NOTIFICATION_SERVICE_TOKEN = 'rs256-edu-to-notification';
     delete process.env.DRILL_NOTIFICATION_TIMEOUT_MS;
   });
 

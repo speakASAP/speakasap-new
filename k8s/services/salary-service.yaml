@@ -172,12 +172,12 @@ spec:
         key: secret/prod/speakasap
         property: PAYMENT_API_KEY
     # education-service validates the salary aggregates endpoint against its OWN
-    # INTERNAL_API_TOKEN, so this must read from education's Vault path — verified
-    # against the live endpoint (INTERNAL_API_TOKEN 200, INTERNAL_SERVICE_TOKEN 401).
-    - secretKey: EDUCATION_SERVICE_INTERNAL_TOKEN
+    # Auth RS256 pair JWT for education InternalAuthGuard
+    # (SALARY_TO_EDUCATION_SERVICE_TOKEN → internal:education-service:internal).
+    - secretKey: SALARY_TO_EDUCATION_SERVICE_TOKEN
       remoteRef:
-        key: secret/prod/speakasap/education
-        property: INTERNAL_API_TOKEN
+        key: secret/prod/speakasap/salary
+        property: SALARY_TO_EDUCATION_SERVICE_TOKEN
     # Per-pair RS256 ingest: svc-<deploy>--logging-microservice@internal.alfares.cz
     # role internal:logging-microservice:ingest.
     - secretKey: LOGGING_SERVICE_TOKEN

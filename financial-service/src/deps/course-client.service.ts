@@ -34,9 +34,6 @@ export class CourseClientService {
 
   async fetchProductsMetadata(ids: number[]): Promise<ProductsMetadataResponse> {
     const token = getOutboundInternalToken();
-    if (!token) {
-      throw new Error('Outbound internal token not configured');
-    }
     const q = new URLSearchParams({ ids: ids.join(',') });
     const url = `${this.baseUrl()}/api/v1/internal/financial/products-metadata?${q.toString()}`;
     const controller = new AbortController();

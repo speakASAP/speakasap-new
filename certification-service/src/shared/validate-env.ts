@@ -11,7 +11,6 @@ const REQUIRED_ENV = [
   'AUTH_SERVICE_TIMEOUT',
   'CERT_VIEW_TOKEN_SECRET',
   'MATERIALS_PUBLIC_BASE_URL',
-  'INTERNAL_API_KEY',
 ];
 
 export function validateEnv(): void {

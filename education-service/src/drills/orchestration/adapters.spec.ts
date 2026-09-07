@@ -13,8 +13,8 @@ describe('DrillIdentityResolverAdapter', () => {
     global.fetch = fetchMock as any;
     process.env.AUTH_SERVICE_URL = 'http://auth-microservice:3370';
     process.env.INTERNAL_API_TOKEN = 'gateway-convention-secret';
-    process.env.INTERNAL_SERVICE_TOKEN = 'auth-convention-secret';
-    delete process.env.AUTH_SERVICE_TOKEN;
+    process.env.AUTH_SERVICE_TOKEN = 'rs256-service-jwt';
+    delete process.env.INTERNAL_SERVICE_TOKEN;
     adapter = new DrillIdentityResolverAdapter();
   });
 
@@ -30,27 +30,13 @@ describe('DrillIdentityResolverAdapter', () => {
   });
 
   /**
-   * auth-microservice's InternalServiceGuard reads `x-internal-service-token` against
-   * INTERNAL_SERVICE_TOKEN, and `x-service-name` against TRUSTED_INTERNAL_SERVICES.
-   *
+   * Auth accepts Authorization Bearer (`AUTH_SERVICE_TOKEN`) only.
    * NOT `x-internal-token`/INTERNAL_API_TOKEN — that is the api-gateway's convention,
    * which orchestration/http.ts correctly sends to content-service. This adapter sent
    * the gateway's convention to auth, so every call 401'd and the teacher wizard showed
-   * "Request failed with status 503" with an empty student list. The previous version of
-   * this test asserted the wrong header, so it passed while production was broken.
+   * "Request failed with status 503" with an empty student list.
    */
-  it('sends the internal service token auth requires, not the gateway one', async () => {
-    fetchMock.mockResolvedValue({ ok: true, json: async () => ({ legacyUserId: 1 }) });
-
-    await adapter.resolveStudentId('auth-1');
-
-    const headers = fetchMock.mock.calls[0][1].headers;
-    expect(headers['x-internal-service-token']).toBe('auth-convention-secret');
-    expect(headers['x-internal-token']).toBeUndefined();
-  });
-
-  it('prefers Authorization Bearer when AUTH_SERVICE_TOKEN is set', async () => {
-    process.env.AUTH_SERVICE_TOKEN = 'rs256-service-jwt';
+  it('sends Authorization Bearer only, not gateway or static headers', async () => {
     fetchMock.mockResolvedValue({ ok: true, json: async () => ({ legacyUserId: 1 }) });
 
     await adapter.resolveStudentId('auth-1');
@@ -58,18 +44,17 @@ describe('DrillIdentityResolverAdapter', () => {
     const headers = fetchMock.mock.calls[0][1].headers;
     expect(headers.Authorization).toBe('Bearer rs256-service-jwt');
     expect(headers['x-internal-service-token']).toBeUndefined();
+    expect(headers['x-internal-token']).toBeUndefined();
+    expect(headers['x-service-name']).toBeUndefined();
   });
 
-  it('identifies itself with the allowlisted caller name, not the deployment name', async () => {
-    // TRUSTED_INTERNAL_SERVICES is keyed on `education-service`; SERVICE_NAME is
-    // `speakasap-education`, the Kubernetes deployment. Sending the latter yields
-    // "Service is not trusted", indistinguishable from a bad token in the response.
-    process.env.SERVICE_NAME = 'speakasap-education';
-    fetchMock.mockResolvedValue({ ok: true, json: async () => ({ legacyUserId: 1 }) });
+  it('fails closed when AUTH_SERVICE_TOKEN is unset', async () => {
+    delete process.env.AUTH_SERVICE_TOKEN;
 
-    await adapter.resolveStudentId('auth-1');
-
-    expect(fetchMock.mock.calls[0][1].headers['x-service-name']).toBe('education-service');
+    await expect(adapter.resolveStudentId('auth-1')).rejects.toMatchObject({
+      response: expect.objectContaining({ code: 'IDENTITY_UNRESOLVED' }),
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   // Contract C7: IDENTITY_UNRESOLVED, fail closed. Every alternative here — defaulting,

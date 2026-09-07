@@ -1,9 +1,12 @@
 import { BadRequestException, Controller, Get, Query, UseGuards } from '@nestjs/common';
-import { InternalTokenGuard } from '../auth/internal-token.guard';
+import { InternalAuthGuard } from '../auth/internal-token.guard';
+import { Roles } from '../auth/roles.decorator';
+import { EDUCATION_SERVICE_INTERNAL_ROLE } from '../auth/roles.constants';
 import { InternalSalaryService } from './internal-salary.service';
 
 @Controller('internal/salary')
-@UseGuards(InternalTokenGuard)
+@UseGuards(InternalAuthGuard)
+@Roles(EDUCATION_SERVICE_INTERNAL_ROLE)
 export class InternalSalaryController {
   constructor(private readonly salary: InternalSalaryService) {}
 

@@ -163,10 +163,6 @@ spec:
       remoteRef:
         key: secret/prod/speakasap/certification
         property: CERT_VIEW_TOKEN_SECRET
-    - secretKey: INTERNAL_API_KEY
-      remoteRef:
-        key: secret/prod/speakasap/certification
-        property: INTERNAL_API_KEY
     # Per-pair RS256 ingest: svc-<deploy>--logging-microservice@internal.alfares.cz
     # role internal:logging-microservice:ingest.
     - secretKey: LOGGING_SERVICE_TOKEN

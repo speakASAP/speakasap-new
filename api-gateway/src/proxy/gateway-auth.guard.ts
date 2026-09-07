@@ -13,8 +13,9 @@ import { hasAnyRole, normalizeRoleNames, resolveRolePolicy } from './route-roles
 
 type ServiceActor = {
   type: 'service';
+  /** Auth principal id (svc-<caller>--<target>@...), never a caller-supplied header. */
   serviceName: string;
-  authMethod: 'internal-service-token';
+  authMethod: 'auth-rs256';
 };
 
 /**
@@ -43,6 +44,36 @@ function enforcementMode(): EnforcementMode {
   return 'shadow';
 }
 
+/** Raw role strings from /auth/validate (string or {name}). */
+function rawRoleNames(roles: unknown): string[] {
+  if (!Array.isArray(roles)) {
+    return [];
+  }
+  const out: string[] = [];
+  for (const entry of roles) {
+    if (typeof entry === 'string' && entry.trim()) {
+      out.push(entry.trim());
+      continue;
+    }
+    if (entry && typeof entry === 'object' && typeof (entry as { name?: unknown }).name === 'string') {
+      const name = (entry as { name: string }).name.trim();
+      if (name) {
+        out.push(name);
+      }
+    }
+  }
+  return out;
+}
+
+/** Gateway entry requires a principal minted for this service, not any internal:*. */
+const GATEWAY_INTERNAL_ROLE_PREFIX = 'internal:speakasap-api-gateway:';
+
+function hasGatewayInternalRole(roles: unknown): boolean {
+  return rawRoleNames(roles).some((role) =>
+    role.toLowerCase().startsWith(GATEWAY_INTERNAL_ROLE_PREFIX),
+  );
+}
+
 @Injectable()
 export class GatewayAuthGuard implements CanActivate {
   private readonly logger = new Logger(GatewayAuthGuard.name);
@@ -67,22 +98,7 @@ export class GatewayAuthGuard implements CanActivate {
     }
 
     if (pathname.startsWith('/api/v1/internal')) {
-      const expected = process.env.GATEWAY_INTERNAL_API_TOKEN;
-      const raw = req.headers['x-internal-token'];
-      const token = Array.isArray(raw) ? raw[0] : raw;
-      if (!expected || token !== expected) {
-        throw new ForbiddenException({
-          code: 'FORBIDDEN_INTERNAL_ROUTE',
-          message: 'Internal routes are not allowed',
-          details: {},
-        });
-      }
-      (req as Request & { serviceActor?: ServiceActor }).serviceActor = {
-        type: 'service',
-        serviceName: this.resolveServiceName(req),
-        authMethod: 'internal-service-token',
-      };
-      return true;
+      return this.activateInternalService(req);
     }
 
     const authz = req.headers.authorization;
@@ -100,9 +116,56 @@ export class GatewayAuthGuard implements CanActivate {
 
     // Role check runs only after the token is proven valid, and only for
     // token-bearing callers. Every bypass above (payment webhooks, lesson
-    // record download, public /seven GETs, internal-token routes) returns
-    // before reaching here and is deliberately unaffected.
+    // record download, public /seven GETs) returns before reaching here.
+    // Internal routes use activateInternalService and never reach user role policy.
     this.enforceRolePolicy(req, pathname, user);
+    return true;
+  }
+
+  /**
+   * `/api/v1/internal/*` entry: Authorization Bearer → Auth `/auth/validate`.
+   * Requires `internal:speakasap-api-gateway:<role>` (least privilege). Fail closed.
+   * No static entry token, no caller-supplied service-name identity.
+   */
+  private async activateInternalService(req: Request): Promise<boolean> {
+    const authz = req.headers.authorization;
+    if (!authz?.startsWith('Bearer ')) {
+      throw new UnauthorizedException({
+        code: 'UNAUTHORIZED',
+        message: 'Missing bearer token',
+        details: {},
+      });
+    }
+    const bearer = authz.slice(7).trim();
+    if (!bearer) {
+      throw new UnauthorizedException({
+        code: 'UNAUTHORIZED',
+        message: 'Missing bearer token',
+        details: {},
+      });
+    }
+
+    const user = await this.auth.validateAccessToken(bearer);
+    if (!hasGatewayInternalRole(user.roles)) {
+      this.logger.warn(
+        `${new Date().toISOString()} internal route denied principal=${user.id} ` +
+          `roles=[${rawRoleNames(user.roles).join(',')}]`,
+      );
+      throw new ForbiddenException({
+        code: 'FORBIDDEN_INTERNAL_ROUTE',
+        message:
+          'Internal routes require an Auth role internal:speakasap-api-gateway:*',
+        details: {},
+      });
+    }
+
+    this.auth.attachRequestContext(user);
+    (req as Request & { authUser?: AuthContextUser }).authUser = user;
+    (req as Request & { serviceActor?: ServiceActor }).serviceActor = {
+      type: 'service',
+      serviceName: user.id,
+      authMethod: 'auth-rs256',
+    };
     return true;
   }
 
@@ -160,11 +223,5 @@ export class GatewayAuthGuard implements CanActivate {
       message: 'Insufficient role for this route',
       details: {},
     });
-  }
-
-  private resolveServiceName(req: Request): string {
-    const raw = req.headers['x-service-name'];
-    const value = Array.isArray(raw) ? raw[0] : raw;
-    return value?.trim() || 'internal-service';
   }
 }

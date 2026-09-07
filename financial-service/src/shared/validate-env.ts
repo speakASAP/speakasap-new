@@ -9,7 +9,6 @@ const REQUIRED_ENV = [
   'PAYMENT_SERVICE_URL',
   'SALARY_SERVICE_URL',
   'COURSE_SERVICE_URL',
-  'FINANCIAL_INTERNAL_API_TOKEN',
 ];
 
 export function validateEnv(): void {
@@ -24,13 +23,13 @@ export function validateEnv(): void {
   }
 
   const token =
-    process.env.INTERNAL_API_TOKEN ||
     process.env.PAYMENT_SERVICE_INTERNAL_TOKEN ||
     process.env.SALARY_SERVICE_INTERNAL_TOKEN ||
-    process.env.COURSE_SERVICE_INTERNAL_TOKEN;
+    process.env.COURSE_SERVICE_INTERNAL_TOKEN ||
+    process.env.INTERNAL_API_TOKEN;
   if (!token) {
     throw new Error(
-      'Missing outbound internal token: set INTERNAL_API_TOKEN or PAYMENT_SERVICE_INTERNAL_TOKEN (or salary/course equivalent)',
+      'Missing outbound internal token: set PAYMENT_SERVICE_INTERNAL_TOKEN (or salary/course/INTERNAL_API_TOKEN)',
     );
   }
 

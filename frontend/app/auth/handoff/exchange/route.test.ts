@@ -15,7 +15,7 @@ beforeEach(() => {
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
   vi.stubEnv('AUTH_SERVICE_URL', 'http://auth.test');
-  vi.stubEnv('INTERNAL_SERVICE_TOKEN', 'internal-token');
+  vi.stubEnv('AUTH_SERVICE_TOKEN', 'rs256-service-jwt');
 });
 
 afterEach(() => {
@@ -40,7 +40,7 @@ describe('POST /auth/handoff/exchange', () => {
     });
   });
 
-  it('calls the session route with the resolved id and the internal headers', async () => {
+  it('calls the session route with the resolved id and Bearer only', async () => {
     vi.spyOn(sso, 'resolveSsoToken').mockResolvedValue({ authUserId: 'u-1' });
     const fetchMock = vi
       .fn()
@@ -52,25 +52,23 @@ describe('POST /auth/handoff/exchange', () => {
     const [url, init] = fetchMock.mock.calls[0];
     expect(url).toBe('http://auth.test/internal/users/u-1/session');
     expect(init.headers).toMatchObject({
-      'x-internal-service-token': 'internal-token',
-      'x-service-name': 'speakasap-frontend',
-    });
-  });
-
-  it('prefers Authorization Bearer when AUTH_SERVICE_TOKEN is set', async () => {
-    vi.stubEnv('AUTH_SERVICE_TOKEN', 'rs256-service-jwt');
-    vi.spyOn(sso, 'resolveSsoToken').mockResolvedValue({ authUserId: 'u-1' });
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValue({ ok: true, json: async () => ({ accessToken: 'tok', expiresIn: 1 }) });
-    vi.stubGlobal('fetch', fetchMock);
-
-    await POST(request({ token: 't' }));
-
-    expect(fetchMock.mock.calls[0][1].headers).toMatchObject({
       Authorization: 'Bearer rs256-service-jwt',
     });
-    expect(fetchMock.mock.calls[0][1].headers['x-internal-service-token']).toBeUndefined();
+    expect(init.headers['x-internal-service-token']).toBeUndefined();
+    expect(init.headers['x-service-name']).toBeUndefined();
+  });
+
+  it('FAILS CLOSED with 503 when AUTH_SERVICE_TOKEN is unset at mint', async () => {
+    vi.stubEnv('AUTH_SERVICE_TOKEN', '');
+    vi.spyOn(sso, 'resolveSsoToken').mockResolvedValue({ authUserId: 'u-1' });
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+
+    const response = await POST(request({ token: 't' }));
+
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toEqual({ error: 'IDENTITY_UNRESOLVED' });
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it('FAILS CLOSED with 503 when minting fails, even though resolution succeeded', async () => {

@@ -12,6 +12,8 @@ const REQUIRED_BASE_ENV: Record<string, string> = {
   DEFAULT_PAGE_SIZE: '10',
   MAX_PAGE_SIZE: '30',
   INTERNAL_API_TOKEN: 'test-token',
+  EDUCATION_TO_NOTIFICATION_SERVICE_TOKEN: 'rs256-edu-to-notification',
+  EDUCATION_TO_CONTENT_SERVICE_TOKEN: 'rs256-edu-to-content',
   AI_SERVICE_URL: 'http://ai-microservice:3380',
   DRILL_GENERATION_MODEL_TIER: 'smart',
 };

@@ -74,7 +74,7 @@ export class EducationClientService {
     try {
       const res = await fetch(url.toString(), {
         method: 'GET',
-        headers: { 'X-Internal-Token': internalToken },
+        headers: { Authorization: `Bearer ${internalToken}` },
         signal: controller.signal,
       });
       const durationMs = Date.now() - started;
