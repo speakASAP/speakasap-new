@@ -50,7 +50,9 @@ Each SpeakASAP service owns its own PostgreSQL database (speakasap_*_db). paymen
 - Unauthenticated requests to protected routes are rejected.
 - For machine service identity, follow the sole canonical [`SERVICE_IDENTITY_CONSUMER_STANDARD.md`](../../../auth-microservice/docs/SERVICE_IDENTITY_CONSUMER_STANDARD.md). It is not reproduced here.
 
-**Known non-conformance — do not copy or extend.** The two bullets above cover the human lane. Service-to-service calls behind the gateway do not meet the standard: every internal hop is gated by a static shared token, with no Auth-issued per-pair principal and no `internal:<target>:<role>` claim.
+**Known non-conformance — do not copy or extend.** The two bullets above cover the human lane. Service-to-service calls behind the gateway do not meet the standard: every *intra-SpeakASAP* internal hop is gated by a static shared token, with no Auth-issued per-pair principal and no `internal:<target>:<role>` claim.
+
+SpeakASAP → **auth-microservice** is a separate lane and is migrating: callers prefer `Authorization: Bearer` via `AUTH_SERVICE_TOKEN` (roles `legacy-lookup`, `sso-handoff`, `speakasap-teacher-grant`) with static fallback until Vault fill and authenticated-call proof. That does not make the intra-SpeakASAP hops compliant.
 
 | Service | Guard | Credential | Header |
 | --- | --- | --- | --- |

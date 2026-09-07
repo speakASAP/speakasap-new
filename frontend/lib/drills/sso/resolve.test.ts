@@ -161,6 +161,21 @@ describe('resolveSsoToken', () => {
     });
   });
 
+  it('prefers Authorization Bearer when AUTH_SERVICE_TOKEN is set', async () => {
+    vi.stubEnv('AUTH_SERVICE_TOKEN', 'rs256-service-jwt');
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue({ ok: true, json: async () => ({ authUserId: 'u-1', provisioned: false }) });
+    vi.stubGlobal('fetch', fetchMock);
+
+    await resolveSsoToken(validToken());
+
+    expect(fetchMock.mock.calls[0][1].headers).toMatchObject({
+      Authorization: 'Bearer rs256-service-jwt',
+    });
+    expect(fetchMock.mock.calls[0][1].headers['x-internal-service-token']).toBeUndefined();
+  });
+
   it('fails closed when the platform secret is not configured', async () => {
     vi.stubEnv('SPEAKASAP_PLATFORM_JWT_SECRET', '');
 

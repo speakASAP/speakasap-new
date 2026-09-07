@@ -180,11 +180,15 @@ spec:
       remoteRef:
         key: secret/prod/ai-microservice
         property: JWT_SECRET
-    # auth-microservice's InternalServiceGuard checks `x-internal-service-token`
-    # against ITS OWN INTERNAL_SERVICE_TOKEN, so this reads from auth's Vault
-    # path. Distinct from INTERNAL_API_TOKEN above, which is the api-gateway's
-    # convention for content-service — the two are not interchangeable, and
-    # sending the wrong one 401s every student-name lookup.
+    # auth-microservice InternalServiceOrRoleGuard: prefer AUTH_SERVICE_TOKEN
+    # (per-pair RS256). INTERNAL_SERVICE_TOKEN remains for the migration window
+    # until ALLOW_INTERNAL_STATIC_TOKEN=false. Principal:
+    # svc-education-service--auth-microservice@internal.alfares.cz
+    # role internal:auth-microservice:legacy-lookup
+    - secretKey: AUTH_SERVICE_TOKEN
+      remoteRef:
+        key: secret/prod/speakasap/education
+        property: AUTH_SERVICE_TOKEN
     - secretKey: INTERNAL_SERVICE_TOKEN
       remoteRef:
         key: secret/prod/auth-microservice

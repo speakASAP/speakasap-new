@@ -160,10 +160,14 @@ spec:
       remoteRef:
         key: secret/prod/speakasap/user
         property: INTERNAL_API_TOKEN
-    # auth-microservice's InternalServiceGuard checks `x-internal-service-token`
-    # against ITS OWN INTERNAL_SERVICE_TOKEN, so this reads from auth's Vault
-    # path. Distinct from INTERNAL_API_TOKEN above — sending the wrong one 401s
-    # every teacher role grant on portal sync.
+    # auth-microservice InternalServiceOrRoleGuard: prefer AUTH_SERVICE_TOKEN
+    # (per-pair RS256). INTERNAL_SERVICE_TOKEN remains for the migration window.
+    # Principal: svc-user-service--auth-microservice@internal.alfares.cz
+    # role internal:auth-microservice:speakasap-teacher-grant
+    - secretKey: AUTH_SERVICE_TOKEN
+      remoteRef:
+        key: secret/prod/speakasap/user
+        property: AUTH_SERVICE_TOKEN
     - secretKey: INTERNAL_SERVICE_TOKEN
       remoteRef:
         key: secret/prod/auth-microservice

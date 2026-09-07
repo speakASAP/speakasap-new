@@ -57,6 +57,22 @@ describe('POST /auth/handoff/exchange', () => {
     });
   });
 
+  it('prefers Authorization Bearer when AUTH_SERVICE_TOKEN is set', async () => {
+    vi.stubEnv('AUTH_SERVICE_TOKEN', 'rs256-service-jwt');
+    vi.spyOn(sso, 'resolveSsoToken').mockResolvedValue({ authUserId: 'u-1' });
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue({ ok: true, json: async () => ({ accessToken: 'tok', expiresIn: 1 }) });
+    vi.stubGlobal('fetch', fetchMock);
+
+    await POST(request({ token: 't' }));
+
+    expect(fetchMock.mock.calls[0][1].headers).toMatchObject({
+      Authorization: 'Bearer rs256-service-jwt',
+    });
+    expect(fetchMock.mock.calls[0][1].headers['x-internal-service-token']).toBeUndefined();
+  });
+
   it('FAILS CLOSED with 503 when minting fails, even though resolution succeeded', async () => {
     vi.spyOn(sso, 'resolveSsoToken').mockResolvedValue({ authUserId: 'u-1' });
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 500 }));

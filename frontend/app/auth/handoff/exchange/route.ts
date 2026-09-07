@@ -6,7 +6,7 @@ import { resolveSsoToken } from '@/lib/drills/sso/resolve';
  * Exchanges a portal SSO token for a platform session.
  *
  * This runs on the server because `resolveSsoToken` needs the platform JWT secret and
- * auth's internal service token; the browser holds neither. The token arrives in the
+ * auth's service credential; the browser holds neither. The token arrives in the
  * request body rather than the URL so it stays out of access logs and referrers.
  *
  * Two calls to auth, and both must succeed before a student is signed in:
@@ -15,6 +15,31 @@ import { resolveSsoToken } from '@/lib/drills/sso/resolve';
  * produces IDENTITY_UNRESOLVED — a resolved identity with no session is still no
  * session, and we never mint one locally.
  */
+
+function buildAuthServiceHeaders(): Record<string, string> {
+  const jwt = (process.env.AUTH_SERVICE_TOKEN || '').trim();
+  if (jwt) {
+    return { Authorization: `Bearer ${jwt}` };
+  }
+
+  const staticToken = (process.env.INTERNAL_SERVICE_TOKEN || '').trim();
+  if (!staticToken) {
+    throw new Error(
+      'AUTH_SERVICE_TOKEN (RS256) or INTERNAL_SERVICE_TOKEN required for auth session mint',
+    );
+  }
+
+  // eslint-disable-next-line no-console
+  console.error(
+    '[handoff/exchange] AUTH_SERVICE_TOKEN unset; using legacy static internal token as speakasap-frontend',
+  );
+
+  return {
+    'x-internal-service-token': staticToken,
+    'x-service-name': 'speakasap-frontend',
+  };
+}
+
 export async function POST(request: Request) {
   let token: string | undefined;
   try {
@@ -70,8 +95,7 @@ async function mintSession(
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-internal-service-token': process.env.INTERNAL_SERVICE_TOKEN || '',
-          'x-service-name': 'speakasap-frontend',
+          ...buildAuthServiceHeaders(),
         },
         signal: controller.signal,
         cache: 'no-store',
