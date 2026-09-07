@@ -43,6 +43,7 @@ describe('AuthClientService.resolveLegacyNames', () => {
       INTERNAL_SERVICE_TOKEN: 'service-token',
       SERVICE_NAME: 'education-service',
     };
+    delete process.env.AUTH_SERVICE_TOKEN;
   });
 
   afterEach(() => {
@@ -55,6 +56,14 @@ describe('AuthClientService.resolveLegacyNames', () => {
     return new AuthClientService().resolveLegacyNames([58]).then(() => {
       expect(headersOf(f)['x-internal-service-token']).toBe('service-token');
     });
+  });
+
+  it('prefers Authorization Bearer when AUTH_SERVICE_TOKEN is set', async () => {
+    process.env.AUTH_SERVICE_TOKEN = 'rs256-service-jwt';
+    const f = stubFetch();
+    await new AuthClientService().resolveLegacyNames([58]);
+    expect(headersOf(f).Authorization).toBe('Bearer rs256-service-jwt');
+    expect(headersOf(f)['x-internal-service-token']).toBeUndefined();
   });
 
   // The allowlist is checked separately from the token: a correct token with no

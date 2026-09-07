@@ -14,6 +14,7 @@ describe('DrillIdentityResolverAdapter', () => {
     process.env.AUTH_SERVICE_URL = 'http://auth-microservice:3370';
     process.env.INTERNAL_API_TOKEN = 'gateway-convention-secret';
     process.env.INTERNAL_SERVICE_TOKEN = 'auth-convention-secret';
+    delete process.env.AUTH_SERVICE_TOKEN;
     adapter = new DrillIdentityResolverAdapter();
   });
 
@@ -46,6 +47,17 @@ describe('DrillIdentityResolverAdapter', () => {
     const headers = fetchMock.mock.calls[0][1].headers;
     expect(headers['x-internal-service-token']).toBe('auth-convention-secret');
     expect(headers['x-internal-token']).toBeUndefined();
+  });
+
+  it('prefers Authorization Bearer when AUTH_SERVICE_TOKEN is set', async () => {
+    process.env.AUTH_SERVICE_TOKEN = 'rs256-service-jwt';
+    fetchMock.mockResolvedValue({ ok: true, json: async () => ({ legacyUserId: 1 }) });
+
+    await adapter.resolveStudentId('auth-1');
+
+    const headers = fetchMock.mock.calls[0][1].headers;
+    expect(headers.Authorization).toBe('Bearer rs256-service-jwt');
+    expect(headers['x-internal-service-token']).toBeUndefined();
   });
 
   it('identifies itself with the allowlisted caller name, not the deployment name', async () => {

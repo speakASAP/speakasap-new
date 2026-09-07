@@ -2,11 +2,47 @@ import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import type { AuthContextUser } from '../shared/auth.types';
 
 /**
- * How this service identifies itself to auth-microservice's
- * TRUSTED_INTERNAL_SERVICES allowlist. Not the K8s deployment name
+ * How this service identifies itself on the legacy static path
+ * (`TRUSTED_INTERNAL_SERVICES`). Not the K8s deployment name
  * (`speakasap-education`) — the allowlist is keyed on caller identity.
+ * Unused once AUTH_SERVICE_TOKEN (RS256) is presented.
  */
 const AUTH_CALLER_NAME = 'education-service';
+
+/**
+ * Headers for auth-microservice internal routes.
+ *
+ * Prefers the per-pair Auth-issued RS256 JWT (`AUTH_SERVICE_TOKEN`) as
+ * `Authorization: Bearer`. Falls back to the shared static token only while
+ * auth still accepts it (`ALLOW_INTERNAL_STATIC_TOKEN` unset). Static fallback
+ * logs at error so the exit condition is visible — not a permanent path.
+ */
+export function buildAuthServiceHeaders(
+  callerName: string = AUTH_CALLER_NAME,
+): Record<string, string> {
+  const jwt = (process.env.AUTH_SERVICE_TOKEN || '').trim();
+  if (jwt) {
+    return { Authorization: `Bearer ${jwt}` };
+  }
+
+  const staticToken = (process.env.INTERNAL_SERVICE_TOKEN || '').trim();
+  if (!staticToken) {
+    throw new Error(
+      'AUTH_SERVICE_TOKEN (RS256) or INTERNAL_SERVICE_TOKEN required for auth internal calls',
+    );
+  }
+
+  // Loud: every static call is a migration debt item. Auth also WARNs on accept.
+  // eslint-disable-next-line no-console
+  console.error(
+    `[auth-client] AUTH_SERVICE_TOKEN unset; using legacy static internal token as ${callerName}`,
+  );
+
+  return {
+    'x-internal-service-token': staticToken,
+    'x-service-name': callerName,
+  };
+}
 
 @Injectable()
 export class AuthClientService {
@@ -45,24 +81,7 @@ export class AuthClientService {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          // auth-microservice's InternalServiceGuard checks
-          // `x-internal-service-token` against INTERNAL_SERVICE_TOKEN, and
-          // `x-service-name` against the TRUSTED_INTERNAL_SERVICES allowlist.
-          //
-          // NOT `x-internal-token` / INTERNAL_API_TOKEN — that is the
-          // api-gateway's convention (gateway-auth.guard.ts), which is what
-          // drills/orchestration/http.ts correctly sends to content-service.
-          // Both conventions are legitimate; sending the gateway's to auth
-          // returns `401 Invalid internal service token` on every call, and the
-          // roster then degrades silently to ids.
-          'x-internal-service-token': process.env.INTERNAL_SERVICE_TOKEN ?? '',
-          // Deliberately a constant, NOT process.env.SERVICE_NAME. That variable
-          // is `speakasap-education` — the Kubernetes deployment name — while the
-          // allowlist auth checks against is keyed on the caller's identity,
-          // `education-service`. Reading the env var sent the deployment name and
-          // every call 401'd with "Service is not trusted", which is
-          // indistinguishable from a bad token in the response.
-          'x-service-name': AUTH_CALLER_NAME,
+          ...buildAuthServiceHeaders(AUTH_CALLER_NAME),
         },
         body: JSON.stringify({ system: 'speakasap-portal', legacyUserIds }),
         signal: controller.signal,

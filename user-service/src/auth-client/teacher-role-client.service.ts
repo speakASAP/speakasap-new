@@ -1,6 +1,36 @@
 import { Injectable, Logger } from '@nestjs/common';
 
 /**
+ * Headers for auth-microservice's teacher-grant route.
+ *
+ * Prefers per-pair RS256 (`AUTH_SERVICE_TOKEN`). Static fallback only while auth
+ * still accepts INTERNAL_SERVICE_TOKEN; logs at error so migration exit is visible.
+ */
+function buildAuthServiceHeaders(): Record<string, string> {
+  const jwt = (process.env.AUTH_SERVICE_TOKEN || '').trim();
+  if (jwt) {
+    return { Authorization: `Bearer ${jwt}` };
+  }
+
+  const staticToken = (process.env.INTERNAL_SERVICE_TOKEN || '').trim();
+  if (!staticToken) {
+    throw new Error(
+      'AUTH_SERVICE_TOKEN (RS256) or INTERNAL_SERVICE_TOKEN required for auth teacher-grant calls',
+    );
+  }
+
+  // eslint-disable-next-line no-console
+  console.error(
+    '[teacher-role-client] AUTH_SERVICE_TOKEN unset; using legacy static internal token',
+  );
+
+  return {
+    'x-internal-service-token': staticToken,
+    'x-service-name': process.env.SERVICE_NAME ?? 'user-service',
+  };
+}
+
+/**
  * Grants the `app:speakasap:teacher` role through auth-microservice's scoped internal
  * endpoint.
  *
@@ -24,8 +54,7 @@ export class TeacherRoleClientService {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-internal-service-token': process.env.INTERNAL_SERVICE_TOKEN ?? '',
-          'x-service-name': process.env.SERVICE_NAME ?? 'user-service',
+          ...buildAuthServiceHeaders(),
         },
         signal: controller.signal,
       });

@@ -133,7 +133,14 @@ spec:
       remoteRef:
         key: secret/prod/speakasap-frontend
         property: SPEAKASAP_PLATFORM_JWT_SECRET
-    # Must equal auth-microservice's, or InternalServiceGuard rejects every call.
+    # Must equal auth-microservice's static secret while the migration window is
+    # open. Prefer AUTH_SERVICE_TOKEN (RS256) once provisioned.
+    # Principal: svc-speakasap-frontend--auth-microservice@internal.alfares.cz
+    # role internal:auth-microservice:sso-handoff
+    - secretKey: AUTH_SERVICE_TOKEN
+      remoteRef:
+        key: secret/prod/speakasap-frontend
+        property: AUTH_SERVICE_TOKEN
     - secretKey: INTERNAL_SERVICE_TOKEN
       remoteRef:
         key: secret/prod/speakasap-frontend

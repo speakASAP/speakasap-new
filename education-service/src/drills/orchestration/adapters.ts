@@ -3,13 +3,8 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { GenerationProgress, ResolveLegacyUserResponse } from '../contracts';
 import { ContentClient } from './content.client';
 import { GenerationJobRepository } from './job-runner.service';
+import { buildAuthServiceHeaders } from '../../auth-client/auth-client.service';
 import { numericEnv, requestUpstream, requiredEnv } from './http';
-
-/**
- * The name auth-microservice's TRUSTED_INTERNAL_SERVICES allowlist is keyed on.
- * Mirrors auth-client.service.ts; see the note in resolveStudentId.
- */
-const AUTH_CALLER_NAME = 'education-service';
 
 /**
  * Track D's implementations of the boundaries Track B2 left unbound.
@@ -124,9 +119,8 @@ export class DrillIdentityResolverAdapter {
     try {
       // Deliberately NOT requestUpstream: that helper sends `x-internal-token`, the
       // api-gateway's convention, which is correct for content-service and ai-microservice
-      // but wrong for auth. auth-microservice's InternalServiceGuard reads
-      // `x-internal-service-token` against INTERNAL_SERVICE_TOKEN, plus `x-service-name`
-      // against the TRUSTED_INTERNAL_SERVICES allowlist.
+      // but wrong for auth. Auth wants Authorization: Bearer (AUTH_SERVICE_TOKEN) or,
+      // during the migration window, x-internal-service-token.
       //
       // Sending the gateway's convention here 401'd every call, and because this resolver
       // fails closed, the teacher wizard rendered "Request failed with status 503" with an
@@ -141,10 +135,7 @@ export class DrillIdentityResolverAdapter {
           method: 'GET',
           headers: {
             Accept: 'application/json',
-            'x-internal-service-token': requiredEnv('INTERNAL_SERVICE_TOKEN', 'auth-microservice'),
-            // A constant, not process.env.SERVICE_NAME: that is the K8s deployment name
-            // `speakasap-education`, while the allowlist is keyed on `education-service`.
-            'x-service-name': AUTH_CALLER_NAME,
+            ...buildAuthServiceHeaders(),
           },
           signal: controller.signal,
         });

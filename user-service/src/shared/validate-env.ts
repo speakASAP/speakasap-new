@@ -10,15 +10,19 @@ const REQUIRED_ENV = [
   'DEFAULT_PAGE_SIZE',
   'MAX_PAGE_SIZE',
   'INTERNAL_API_TOKEN',
-  // Sent as `x-internal-service-token` when granting the speakasap teacher role on
-  // portal sync. Missing here means every grant 401s, so fail at boot instead.
-  'INTERNAL_SERVICE_TOKEN',
 ];
 
 export function validateEnv(): void {
   const missing = REQUIRED_ENV.filter((key) => !process.env[key]);
   if (missing.length > 0) {
     throw new Error(`Missing required env vars: ${missing.join(', ')}`);
+  }
+
+  // Prefer AUTH_SERVICE_TOKEN (RS256). INTERNAL_SERVICE_TOKEN is migration fallback.
+  if (!(process.env.AUTH_SERVICE_TOKEN || '').trim() && !(process.env.INTERNAL_SERVICE_TOKEN || '').trim()) {
+    throw new Error(
+      'Missing required env vars: AUTH_SERVICE_TOKEN or INTERNAL_SERVICE_TOKEN (auth teacher-grant)',
+    );
   }
 
   const numericKeys = [
