@@ -87,8 +87,7 @@ async function fetchPage(base, token, from, to, offset) {
   });
   const res = await fetch(`${base.replace(/\/$/, '')}/lesson-records/?${params}`, {
     headers: {
-      'x-internal-token': token,
-      'x-service-name': 'lesson-record-ingest',
+      Authorization: `Bearer ${token}`,
       'content-type': 'application/json',
     },
   });
@@ -116,7 +115,7 @@ async function fetchPage(base, token, from, to, offset) {
     // The portal serves the login page with HTTP 200 when a token is not accepted, so a
     // non-JSON body is an auth failure, not a parse quirk. Recorded in LESSON_API_OPERATIONS.
     throw new Error(
-      'portal returned a non-JSON body (HTTP 200 login page = token rejected); check PORTAL_INBOUND_API_TOKEN',
+      'portal returned a non-JSON body (HTTP 200 login page = token rejected); check EDUCATION_TO_PORTAL_SERVICE_TOKEN',
     );
   }
   return body;
@@ -184,7 +183,7 @@ async function main() {
   }
 
   const base = requireEnv('PORTAL_API_URL');
-  const token = requireEnv('PORTAL_INBOUND_API_TOKEN');
+  const token = requireEnv('EDUCATION_TO_PORTAL_SERVICE_TOKEN');
   const prisma = new PrismaClient();
   const report = {
     domain: 'education_lesson_record_ingest',

@@ -60,8 +60,11 @@ disburse) and financial outbound use Auth-issued RS256 only. Static
 compares on the listed guards are deleted.
 
 Remaining non-conformance (do not extend): none for Nest SpeakASAP
-receivers after content-service InternalAuthGuard. Portal PHP inbound
-(`PORTAL_INBOUND_API_TOKEN` / lesson-client) is a separate portal lane.
+receivers after content-service InternalAuthGuard. Portal inbound uses
+Auth RS256 Bearer → `/auth/validate` with `internal:speakasap-portal:internal`
+(education `EDUCATION_TO_PORTAL_SERVICE_TOKEN`); static
+`PORTAL_INBOUND_API_TOKEN` / `x-internal-token` deleted. Portal outbound
+drills use `PORTAL_TO_EDUCATION_SERVICE_TOKEN`.
 
 Gateway **entry** hop for `/api/v1/internal/*` is Auth RS256 Bearer →
 `/auth/validate` with `internal:speakasap-api-gateway:*` only (not any

@@ -69,7 +69,7 @@ function requireEnv(name: string): string {
 
 async function fetchAggregates(legacyPortalUserIds: number[]): Promise<AggregateResponse> {
   const base = requireEnv('EDUCATION_SERVICE_URL').replace(/\/$/, '');
-  const token = requireEnv('INTERNAL_API_TOKEN');
+  const token = requireEnv('EDUCATION_SERVICE_BEARER_TOKEN');
   const url = new URL(`${base}/api/v1/internal/salary/period-aggregates`);
   url.searchParams.set('period', PERIOD);
   if (legacyPortalUserIds.length) {
@@ -77,7 +77,7 @@ async function fetchAggregates(legacyPortalUserIds: number[]): Promise<Aggregate
   }
 
   const res = await fetch(url.toString(), {
-    headers: { 'X-Internal-Token': token, 'X-Service-Name': 'salary-parity-check' },
+    headers: { Authorization: `Bearer ${token}` },
   });
   if (!res.ok) {
     throw new Error(`education-service period-aggregates HTTP ${res.status}: ${await res.text()}`);

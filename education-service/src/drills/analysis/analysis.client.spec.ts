@@ -1,6 +1,5 @@
 import { AnalysisClient } from './analysis.client';
 import * as http from '../orchestration/http';
-import * as serviceToken from '../orchestration/service-token';
 
 const request = {
   languageCode: 'en',
@@ -22,17 +21,17 @@ const request = {
 
 describe('AnalysisClient', () => {
   const originalUrl = process.env.AI_SERVICE_URL;
-  const originalSecret = process.env.AI_SERVICE_JWT_SECRET;
+  const originalToken = process.env.EDUCATION_TO_AI_SERVICE_TOKEN;
 
   beforeEach(() => {
     process.env.AI_SERVICE_URL = 'http://ai-microservice:3400';
-    process.env.AI_SERVICE_JWT_SECRET = 'test-secret';
+    process.env.EDUCATION_TO_AI_SERVICE_TOKEN = 'edu-to-ai-rs256';
     jest.restoreAllMocks();
   });
 
   afterAll(() => {
     process.env.AI_SERVICE_URL = originalUrl;
-    process.env.AI_SERVICE_JWT_SECRET = originalSecret;
+    process.env.EDUCATION_TO_AI_SERVICE_TOKEN = originalToken;
   });
 
   it('posts to the analyze route', async () => {
@@ -52,8 +51,7 @@ describe('AnalysisClient', () => {
     );
   });
 
-  it('sends a minted service token, never a caller token', async () => {
-    const mint = jest.spyOn(serviceToken, 'mintServiceToken').mockReturnValue('minted');
+  it('sends the Auth pair JWT, never a caller token', async () => {
     const spy = jest.spyOn(http, 'requestUpstream').mockResolvedValue({
       clusters: [],
       meta: { model: 'claude-3', tier: 'smart', promptTokens: 100, completionTokens: 50 },
@@ -61,8 +59,7 @@ describe('AnalysisClient', () => {
 
     await new AnalysisClient().analyze(request);
 
-    expect(mint).toHaveBeenCalledWith('education-service', 'test-secret');
-    expect(spy.mock.calls[0][0].token).toBe('minted');
+    expect(spy.mock.calls[0][0].token).toBe('edu-to-ai-rs256');
   });
 
   it('propagates an upstream failure rather than returning empty clusters', async () => {
@@ -75,5 +72,13 @@ describe('AnalysisClient', () => {
     delete process.env.AI_SERVICE_URL;
 
     await expect(new AnalysisClient().analyze(request)).rejects.toThrow(/AI_SERVICE_URL/);
+  });
+
+  it('raises when EDUCATION_TO_AI_SERVICE_TOKEN is unset', async () => {
+    delete process.env.EDUCATION_TO_AI_SERVICE_TOKEN;
+
+    await expect(new AnalysisClient().analyze(request)).rejects.toThrow(
+      /EDUCATION_TO_AI_SERVICE_TOKEN/,
+    );
   });
 });

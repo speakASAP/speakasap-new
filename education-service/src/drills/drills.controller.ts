@@ -480,9 +480,9 @@ export class DrillsController {
   /**
    * A drill set with its answers, for the teacher review screen.
    *
-   * Proxies content-service's `internal/drill-sets/:uuid`, which the gateway gates on
-   * `x-internal-token` — a credential a browser cannot hold, so the review screen 404'd
-   * against the public path.
+   * Proxies content-service's `internal/drill-sets/:uuid`, which requires an
+   * Auth RS256 service Bearer — a credential a browser cannot hold, so the review
+   * screen 404'd against the public path.
    *
    * The route cannot simply be exposed on content-service: that service has no auth
    * guard, and the gateway validates a token without checking any role, so a public
@@ -503,7 +503,7 @@ export class DrillsController {
    * Teacher edits to the sentences of a set awaiting review.
    *
    * Proxies content-service's internal item routes for the same reason as `teacherSet`:
-   * those routes are gated on `x-internal-token`, which a browser cannot hold, and
+   * those routes require an Auth RS256 service Bearer, which a browser cannot hold, and
    * content-service has no auth guard of its own — so the staff check must happen here,
    * before the internal hop.
    */
@@ -712,8 +712,8 @@ export class DrillsController {
   /**
    * Approve a set, for the teacher review screen.
    *
-   * Proxies content-service's `internal/drill-sets/:uuid/approve`, which the gateway
-   * gates on `x-internal-token` — the browser called the public path and got a bare 404
+   * Proxies content-service's `internal/drill-sets/:uuid/approve`, which requires an
+   * Auth RS256 service Bearer — the browser called the public path and got a bare 404
    * with nothing on screen.
    *
    * That route trusts `teacherId` from its body outright, so the value comes from this
@@ -774,7 +774,7 @@ export class DrillsController {
    * The generation pipeline calls both on the teacher's behalf, and `GenerationJob.token`
    * is that credential. Taken from the header the guard already validated rather than
    * substituting a service token: the upstream routes that carry answers additionally
-   * require `x-internal-token`, which the clients add themselves, so forwarding the
+   * require a service Bearer, which the clients add themselves, so forwarding the
    * teacher's token keeps the request attributable without widening what it can reach.
    */
   private bearer(req: Request): string {

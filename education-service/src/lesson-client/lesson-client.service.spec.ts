@@ -65,7 +65,7 @@ describe('LessonClientService', () => {
       expect(String(fetchFn.mock.calls[0][0])).toBe(
         'http://portal.test/students/42/progress/',
       );
-      expect(fetchFn.mock.calls[0][1].headers['x-internal-token']).toBe('secret-token');
+      expect(fetchFn.mock.calls[0][1].headers.Authorization).toBe('Bearer secret-token');
     });
 
     // "No active course" is a real answer, and the caller generates without a ceiling.
@@ -125,13 +125,13 @@ describe('LessonClientService', () => {
       expect(lesson.teacherId).toBeNull();
     });
 
-    it('sends the x-internal-token header', async () => {
+    it('sends Authorization Bearer (Auth pair JWT)', async () => {
       const fetchFn = jest.fn().mockResolvedValue(okResponse(LESSON_BODY));
       await serviceWith(fetchFn).getLesson(LESSON);
 
       const headers = fetchFn.mock.calls[0][1].headers;
-      expect(headers['x-internal-token']).toBe('secret-token');
-      expect(headers['x-service-name']).toBe('education-service');
+      expect(headers.Authorization).toBe('Bearer secret-token');
+      expect(headers['x-internal-token']).toBeUndefined();
     });
 
     it('raises LessonNotFoundError on 404', async () => {

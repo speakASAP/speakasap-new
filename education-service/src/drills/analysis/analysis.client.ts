@@ -1,18 +1,16 @@
 import { Injectable } from '@nestjs/common';
 import { numericEnv, requestUpstream, requiredEnv } from '../orchestration/http';
-import { mintServiceToken } from '../orchestration/service-token';
 import { AnalyzeErrorsRequest, AnalyzeErrorsResponse } from './contracts';
 
 const UPSTREAM = 'ai-microservice';
-const SERVICE_ID = 'education-service';
 
 /**
  * Calls ai-microservice's error analyzer.
  *
- * AUTHENTICATION — a minted service token, never a caller's bearer token, for the same
- * reason as `AiClient`: `TeacherAssistantController` sits behind `ServiceAuthGuard`, which
- * verifies a service JWT signed with `AI_SERVICE_JWT_SECRET` and has no per-user concept.
- * Forwarding a user token returns `401 Malformed token`.
+ * Auth: Auth-issued RS256 pair JWT (`EDUCATION_TO_AI_SERVICE_TOKEN`) as
+ * Authorization Bearer. Local HS256 mint against AI_SERVICE_JWT_SECRET is
+ * deleted — ai-microservice ServiceAuthGuard accepts Auth RS256 only
+ * (`internal:ai-microservice:invoke`).
  *
  * **Not fail-soft.** A failure here must reach `AnalysisService`, which records it as a
  * `FAILED` run the student and teacher can see and retry. Returning empty clusters would
@@ -36,7 +34,7 @@ export class AnalysisClient {
   }
 
   private serviceToken(): string {
-    return mintServiceToken(SERVICE_ID, requiredEnv('AI_SERVICE_JWT_SECRET', UPSTREAM));
+    return requiredEnv('EDUCATION_TO_AI_SERVICE_TOKEN', UPSTREAM);
   }
 
   private baseUrl(): string {

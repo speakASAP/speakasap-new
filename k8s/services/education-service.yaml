@@ -120,7 +120,7 @@ data:
   # LESSON-API: transitional — delete at legacy sunset.
   # The portal owns lessons; this service holds no lesson tables. Public URL, not a
   # cluster one: the portal runs on the speakasap host, outside this cluster.
-  # PORTAL_INBOUND_API_TOKEN is the matching secret, injected via ExternalSecret below.
+  # EDUCATION_TO_PORTAL_SERVICE_TOKEN (Auth RS256) is injected via ExternalSecret.
   PORTAL_API_URL: "https://speakasap.com/api/v1/internal"
   PORTAL_CLIENT_TIMEOUT_MS: "5000"
   CONTENT_SERVICE_URL: "http://speakasap-content:4201"
@@ -180,41 +180,31 @@ spec:
       remoteRef:
         key: secret/prod/speakasap/education
         property: EDUCATION_TO_USER_SERVICE_TOKEN
-    # ai-microservice's ServiceAuthGuard verifies an HS256 service JWT signed
-    # with ITS OWN JWT_SECRET, so this reads from ai-microservice's Vault path
-    # rather than speakasap's. Without it, AiClient cannot mint a token the
-    # generator accepts and every drill generation fails with 401.
-    - secretKey: AI_SERVICE_JWT_SECRET
+    # Auth-issued RS256 pair JWT for ai-microservice
+    # (svc-education-service--ai-microservice@…, internal:ai-microservice:invoke).
+    - secretKey: EDUCATION_TO_AI_SERVICE_TOKEN
       remoteRef:
-        key: secret/prod/ai-microservice
-        property: JWT_SECRET
-    # auth-microservice InternalServiceOrRoleGuard: prefer AUTH_SERVICE_TOKEN
-    # (per-pair RS256). INTERNAL_SERVICE_TOKEN remains for the migration window
-    # until ALLOW_INTERNAL_STATIC_TOKEN=false. Principal:
+        key: secret/prod/speakasap/education
+        property: EDUCATION_TO_AI_SERVICE_TOKEN
+    # auth-microservice InternalServiceOrRoleGuard: AUTH_SERVICE_TOKEN only
+    # (per-pair RS256). Principal:
     # svc-education-service--auth-microservice@internal.alfares.cz
     # role internal:auth-microservice:legacy-lookup
     - secretKey: AUTH_SERVICE_TOKEN
       remoteRef:
         key: secret/prod/speakasap/education
         property: AUTH_SERVICE_TOKEN
-    - secretKey: INTERNAL_SERVICE_TOKEN
-      remoteRef:
-        key: secret/prod/auth-microservice
-        property: INTERNAL_SERVICE_TOKEN
     - secretKey: LESSON_RECORD_MEDIA_TOKEN_SECRET
       remoteRef:
         key: secret/prod/speakasap/education
         property: LESSON_RECORD_MEDIA_TOKEN_SECRET
     # LESSON-API: transitional — delete at legacy sunset.
-    # Presented as x-internal-token to the portal's /api/v1/internal/ endpoints. The SAME
-    # value must be set as PORTAL_INBOUND_API_TOKEN in the portal's own .env on the
-    # speakasap host, which does not read Vault. Both sides fail closed when it is unset:
-    # the portal denies every request, and LessonClientService raises rather than
-    # returning an empty roster. See docs/LESSON_API_OPERATIONS.md.
-    - secretKey: PORTAL_INBOUND_API_TOKEN
+    # Bearer to portal /api/v1/internal/ (Auth RS256,
+    # internal:speakasap-portal:internal). Portal validates via AUTH_SERVICE_URL.
+    - secretKey: EDUCATION_TO_PORTAL_SERVICE_TOKEN
       remoteRef:
         key: secret/prod/speakasap/education
-        property: PORTAL_INBOUND_API_TOKEN
+        property: EDUCATION_TO_PORTAL_SERVICE_TOKEN
     - secretKey: RECORDS_S3_ENDPOINT_URL
       remoteRef:
         key: secret/prod/speakasap/education

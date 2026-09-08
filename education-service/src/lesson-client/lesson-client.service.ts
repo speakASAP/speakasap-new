@@ -44,7 +44,7 @@ const MAX_RANGE_PAGES = 200;
 export class LessonClientService {
   private readonly logger = new Logger(LessonClientService.name);
   private readonly baseUrl = (process.env.PORTAL_API_URL || '').replace(/\/+$/, '');
-  private readonly token = process.env.PORTAL_INBOUND_API_TOKEN || '';
+  private readonly token = process.env.EDUCATION_TO_PORTAL_SERVICE_TOKEN || '';
   private readonly timeoutMs =
     Number(process.env.PORTAL_CLIENT_TIMEOUT_MS) || DEFAULT_TIMEOUT_MS;
   private readonly rangeTimeoutMs =
@@ -386,11 +386,11 @@ export class LessonClientService {
     if (!this.baseUrl || !this.token) {
       // Misconfiguration is a failure, not a reason to degrade quietly.
       this.logger.error(
-        'PORTAL_API_URL/PORTAL_INBOUND_API_TOKEN not configured; cannot reach the portal',
+        'PORTAL_API_URL/EDUCATION_TO_PORTAL_SERVICE_TOKEN not configured; cannot reach the portal',
       );
       throw new LessonServiceUnavailableError(
         lessonUuid,
-        'PORTAL_API_URL/PORTAL_INBOUND_API_TOKEN not configured',
+        'PORTAL_API_URL/EDUCATION_TO_PORTAL_SERVICE_TOKEN not configured',
       );
     }
 
@@ -402,8 +402,7 @@ export class LessonClientService {
       response = await this.fetchFn(this.baseUrl + path, {
         method,
         headers: {
-          'x-internal-token': this.token,
-          'x-service-name': 'education-service',
+          Authorization: `Bearer ${this.token}`,
           'content-type': 'application/json',
         },
         body: payload ? JSON.stringify(payload) : undefined,
