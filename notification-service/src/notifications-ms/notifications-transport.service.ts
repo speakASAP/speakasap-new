@@ -50,10 +50,8 @@ export class NotificationsTransportService {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), this.timeoutMs());
     try {
-      // notifications-microservice guards every route with JwtRolesGuard, which
-      // accepts a static service token as `Authorization: Bearer`. It reads no
-      // `x-api-key` header at all — the previous key was sent into a void and every
-      // delivery 401'd. Missing token is a misconfiguration, not a degraded mode.
+      // notifications-microservice guards every route with JwtRolesGuard (Auth
+      // RS256). Missing token is a misconfiguration, not a degraded mode.
       const serviceToken = process.env.NOTIFICATIONS_MS_SERVICE_TOKEN;
       if (!serviceToken) {
         throw notificationHttpException(
