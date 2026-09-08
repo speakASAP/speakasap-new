@@ -62,7 +62,8 @@ def main() -> int:
         "noBroadSevenAnonymousMethods": not any(snippet in guard for snippet in ["req.method !== 'POST'", "['GET', 'POST']", '["GET", "POST"]']),
         "internalRoutesRequireAuthServiceJwt": "pathname.startsWith('/api/v1/internal')" in guard
         and "activateInternalService" in guard
-        and "hasInternalServiceRole" in guard
+        and "hasGatewayInternalRole" in guard
+        and "internal:speakasap-api-gateway:" in guard
         and "GATEWAY_INTERNAL_API_TOKEN" not in guard
         and "x-internal-token" not in guard,
         "paymentWebhookExceptionRemainsPostOnly": "pathname.startsWith('/api/v1/webhooks/payments') && req.method === 'POST'" in guard,
