@@ -138,10 +138,6 @@ spec:
       remoteRef:
         key: secret/prod/speakasap-frontend
         property: AUTH_SERVICE_TOKEN
-    - secretKey: INTERNAL_SERVICE_TOKEN
-      remoteRef:
-        key: secret/prod/speakasap-frontend
-        property: INTERNAL_SERVICE_TOKEN
     - secretKey: AUTH_SERVICE_URL
       remoteRef:
         key: secret/prod/speakasap-frontend
