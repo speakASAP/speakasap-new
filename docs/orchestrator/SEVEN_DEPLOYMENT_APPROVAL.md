@@ -1,7 +1,12 @@
 # Seven Frontend/API Deployment Approval Packet
 
 Date: 2026-06-13
-Status: draft approval packet; no deployment or route change has run in this chunk.
+Status: CLOSED — executed. Verified serving in production on 2026-09-08.
+
+> Closure note (2026-09-08): the scoped deployment described below has run and
+> the seven slice is live. This packet is retained as the historical record of
+> the approval; it is no longer a pending request. See "Post-Execution
+> Verification" below for the evidence.
 
 ## Request
 
@@ -35,6 +40,31 @@ Current deployed state is not yet ready for seven:
 - `/tmp/speakasap-seven-deployment-smoke-current-v1.json` recorded `writes=false`, overall `ok=false`.
 - Statuses: `health=200`, `courseApi=401`, `lessonsApi=401`, `lessonApi=401`, `coursePage=404`, `lessonPage=404`, `pdfHead=404`, `audioHead=404`.
 - This is expected before deploying the seven gateway/frontend changes and before data/media are available.
+
+## Post-Execution Verification (2026-09-08)
+
+The pre-deployment baseline above is superseded. Read-only probes against
+`https://speakasap.alfares.cz` and `https://assets.alfares.cz` recorded:
+
+- `GET /api/v1/seven/courses` = `200`, returning 19 courses.
+- `GET /en/seven` = `200`; `GET /en/seven/1` = `200` (previously `404`).
+- Lesson totals across all 19 language codes: **136 lessons, 429 exercises** —
+  matching the planned counts in `SEVEN_DATA_MIGRATION_APPROVAL.md` exactly.
+- Rows carry `migrationBatch: "seven-content-legacy-20260613"` and
+  `legacyTemplateBase` provenance from `speakasap-portal`.
+- Media resolves: sampled `pdfHref` and audio `mediaRefs` for `de`, `en`, `ru`
+  returned `200` (12/12 sampled URLs) under
+  `https://assets.alfares.cz/media/{pdf,audio}/<lang>/`.
+- `speakasap-content`, `speakasap-api-gateway`, and `speakasap-frontend` are
+  running in `statex-apps`.
+
+Note: bare `GET /api/v1/seven` returns `404`; only `/api/v1/seven/courses` and
+`/api/v1/seven/courses/<lang>/lessons` serve. This appears intentional (no index
+route) but is unconfirmed against the original intent.
+
+Deployment image tags cannot be used as evidence of this operator's execution:
+the three scoped services have been redeployed many times since by normal
+auto-deploy on `main`, so their current tags reflect `HEAD`, not the migration.
 
 ## Proposed Scoped Deployment Shape
 

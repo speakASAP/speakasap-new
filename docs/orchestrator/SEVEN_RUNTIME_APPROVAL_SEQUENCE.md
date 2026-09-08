@@ -1,7 +1,14 @@
 # Seven Runtime Approval Sequence
 
 Date: 2026-06-13
-Status: canonical gated sequence; no runtime approval is inferred by this document.
+Status: CLOSED — all six gates executed. Verified serving in production on 2026-09-08.
+
+> Closure note (2026-09-08): gates 1-6 have run and the seven slice is live
+> (19 courses, 136 lessons, 429 exercises, media resolving). This runbook is
+> retained as the historical record of the approved order. The gated operators
+> it names were one-shot migration tooling and their work is complete; do not
+> re-run them. Verification evidence is in
+> `docs/orchestrator/SEVEN_DEPLOYMENT_APPROVAL.md`.
 
 ## Purpose
 
