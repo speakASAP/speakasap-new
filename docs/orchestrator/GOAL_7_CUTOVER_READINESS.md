@@ -81,8 +81,7 @@ Required education secret key names are present:
 
 - `DATABASE_URL`
 - `DB_PASSWORD`
-- Machine identity follows the [Service Identity Consumer Standard](../../../auth-microservice/docs/SERVICE_IDENTITY_CONSUMER_STANDARD.md)
-- `JWT_TOKEN`
+- Machine identity follows the [Service Identity Consumer Standard](../../../auth-microservice/docs/SERVICE_IDENTITY_CONSUMER_STANDARD.md) (pair RS256 bearer env key for each caller→target; not a shared opaque `JWT_TOKEN`)
 - `RECORDS_S3_ACCESS_KEY`
 - `RECORDS_S3_BUCKET`
 - `RECORDS_S3_ENDPOINT_URL`
@@ -95,11 +94,12 @@ Root SpeakASAP secret key names include:
 
 - `DATABASE_URL`
 - `DB_PASSWORD`
-- `JWT_SECRET`
-- `JWT_TOKEN`
-- `PAYMENT_API_KEY`
+- `JWT_SECRET` (human/user lane material only — not machine S2S)
+- Pair service JWTs for outbound callers per [Service Identity Consumer Standard](../../../auth-microservice/docs/SERVICE_IDENTITY_CONSUMER_STANDARD.md)
 - `PAYMENT_APPLICATION_ID`
-- `PAYMENT_WEBHOOK_API_KEY`
+- `PAYMENT_WEBHOOK_API_KEY` (provider webhook verification — not Alfares S2S)
+
+Do **not** treat opaque `JWT_TOKEN` or `PAYMENT_API_KEY` as the service-to-service protocol.
 
 OpenSSL runtime versions:
 

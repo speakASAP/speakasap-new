@@ -46,15 +46,16 @@ Each SpeakASAP service owns its own PostgreSQL database (speakasap_*_db). paymen
 
 ## authentication and authorization
 
-- JWT validation is required on all protected student/teacher/operator routes across services and api-gateway.
-- Unauthenticated requests to protected routes are rejected.
-- Machine service identity follows only
+- Human/student/teacher/operator JWT validation is required on protected routes; unauthenticated requests are rejected.
+- Machine service identity: sole authority
   [`SERVICE_IDENTITY_CONSUMER_STANDARD.md`](../../../auth-microservice/docs/SERVICE_IDENTITY_CONSUMER_STANDARD.md).
-  Intra-SpeakASAP hops use Auth-issued RS256 Bearer tokens validated via
-  `/auth/validate` with explicit `internal:<target>:<role>` (pair env keys such as
-  `GATEWAY_TO_<SERVICE>_TOKEN`, `EDUCATION_TO_PORTAL_SERVICE_TOKEN`,
-  `PORTAL_TO_EDUCATION_SERVICE_TOKEN`, `AUTH_SERVICE_TOKEN`). Do not invent a
-  parallel S2S credential model in this repository.
+  SpeakASAP-specific facts only:
+  - Receiver entry: api-gateway `/api/v1/internal/*` (role prefix `internal:speakasap-api-gateway:*`).
+  - Pair env var names (values never in docs): `AUTH_SERVICE_TOKEN`,
+    `EDUCATION_TO_PORTAL_SERVICE_TOKEN`, `GATEWAY_TO_USER_SERVICE_TOKEN`,
+    `GATEWAY_TO_EDUCATION_SERVICE_TOKEN`, `GATEWAY_TO_CONTENT_SERVICE_TOKEN`,
+    `GATEWAY_TO_FINANCIAL_SERVICE_TOKEN`, `GATEWAY_TO_PAYMENT_SERVICE_TOKEN`,
+    `GATEWAY_TO_SALARY_SERVICE_TOKEN`, `GATEWAY_TO_COURSE_SERVICE_TOKEN`.
 
 ## synchronous dependencies
 
