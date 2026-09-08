@@ -1,20 +1,28 @@
 /**
- * Outbound credential to payment/salary/course internal slice routes.
- * Those receivers still compare X-Internal-Token until their own Auth RS256 migration.
- * Inbound financial InternalAuthGuard no longer uses FINANCIAL_INTERNAL_API_TOKEN.
+ * Outbound Auth RS256 pair JWTs for financial → payment/salary/course.
+ * Static shared INTERNAL_API_TOKEN / X-Internal-Token are deleted.
+ * See auth-microservice/docs/SERVICE_IDENTITY_CONSUMER_STANDARD.md.
  */
-export function getOutboundInternalToken(): string {
-  const token = (
-    process.env.PAYMENT_SERVICE_INTERNAL_TOKEN ||
-    process.env.SALARY_SERVICE_INTERNAL_TOKEN ||
-    process.env.COURSE_SERVICE_INTERNAL_TOKEN ||
-    process.env.INTERNAL_API_TOKEN ||
-    ''
-  ).trim();
+export function getOutboundPaymentServiceToken(): string {
+  const token = (process.env.FINANCIAL_TO_PAYMENT_SERVICE_TOKEN || '').trim();
   if (!token) {
-    throw new Error(
-      'Outbound internal token unset: set PAYMENT_SERVICE_INTERNAL_TOKEN (or salary/course/INTERNAL_API_TOKEN)',
-    );
+    throw new Error('FINANCIAL_TO_PAYMENT_SERVICE_TOKEN is unset');
+  }
+  return token;
+}
+
+export function getOutboundSalaryServiceToken(): string {
+  const token = (process.env.FINANCIAL_TO_SALARY_SERVICE_TOKEN || '').trim();
+  if (!token) {
+    throw new Error('FINANCIAL_TO_SALARY_SERVICE_TOKEN is unset');
+  }
+  return token;
+}
+
+export function getOutboundCourseServiceToken(): string {
+  const token = (process.env.FINANCIAL_TO_COURSE_SERVICE_TOKEN || '').trim();
+  if (!token) {
+    throw new Error('FINANCIAL_TO_COURSE_SERVICE_TOKEN is unset');
   }
   return token;
 }

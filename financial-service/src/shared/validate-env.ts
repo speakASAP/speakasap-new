@@ -22,15 +22,14 @@ export function validateEnv(): void {
     throw new Error('Missing AUTH_SERVICE_URL or AUTH_MICROSERVICE_URL');
   }
 
-  const token =
-    process.env.PAYMENT_SERVICE_INTERNAL_TOKEN ||
-    process.env.SALARY_SERVICE_INTERNAL_TOKEN ||
-    process.env.COURSE_SERVICE_INTERNAL_TOKEN ||
-    process.env.INTERNAL_API_TOKEN;
-  if (!token) {
-    throw new Error(
-      'Missing outbound internal token: set PAYMENT_SERVICE_INTERNAL_TOKEN (or salary/course/INTERNAL_API_TOKEN)',
-    );
+  const pairTokens = [
+    'FINANCIAL_TO_PAYMENT_SERVICE_TOKEN',
+    'FINANCIAL_TO_SALARY_SERVICE_TOKEN',
+    'FINANCIAL_TO_COURSE_SERVICE_TOKEN',
+  ];
+  const missingPairs = pairTokens.filter((key) => !(process.env[key] || '').trim());
+  if (missingPairs.length > 0) {
+    throw new Error(`Missing outbound Auth RS256 pair tokens: ${missingPairs.join(', ')}`);
   }
 
   const numericKeys = ['FINANCIAL_SERVICE_PORT', 'LOGGING_SERVICE_TIMEOUT', 'AUTH_SERVICE_TIMEOUT'];

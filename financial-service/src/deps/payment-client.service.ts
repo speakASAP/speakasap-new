@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { getOutboundInternalToken } from './internal-api-token';
+import { getOutboundPaymentServiceToken } from './internal-api-token';
 import { fetchJsonWithRetry } from './http-fetch';
 
 export type PaidOrderRow = {
@@ -34,8 +34,6 @@ export type SliceEnvelope<T> = {
 export class PaymentClientService {
   private readonly logger = new Logger(PaymentClientService.name);
 
-  private readonly serviceName = process.env.SERVICE_NAME || 'speakasap-financial';
-
   private baseUrl(): string {
     const u = process.env.PAYMENT_SERVICE_URL?.replace(/\/$/, '');
     if (!u) {
@@ -54,7 +52,7 @@ export class PaymentClientService {
     cursor?: string;
     limit: number;
   }): Promise<SliceEnvelope<PaidOrderRow>> {
-    const token = getOutboundInternalToken();
+    const token = getOutboundPaymentServiceToken();
     const q = new URLSearchParams();
     if (params.paidAfter) {
       q.set('paidAfter', params.paidAfter);
@@ -75,7 +73,7 @@ export class PaymentClientService {
         url,
         {
           method: 'GET',
-          headers: { 'X-Internal-Token': token, 'X-Service-Name': this.serviceName },
+          headers: { Authorization: `Bearer ${token}` },
           signal: controller.signal,
         },
         this.logger,
@@ -91,7 +89,7 @@ export class PaymentClientService {
     createdAfter?: string;
     createdBefore?: string;
   }): Promise<SliceEnvelope<TransactionsRow>> {
-    const token = getOutboundInternalToken();
+    const token = getOutboundPaymentServiceToken();
     const q = new URLSearchParams();
     if (params.cursor) {
       q.set('cursor', params.cursor);
@@ -112,7 +110,7 @@ export class PaymentClientService {
         url,
         {
           method: 'GET',
-          headers: { 'X-Internal-Token': token, 'X-Service-Name': this.serviceName },
+          headers: { Authorization: `Bearer ${token}` },
           signal: controller.signal,
         },
         this.logger,

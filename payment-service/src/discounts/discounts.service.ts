@@ -4,7 +4,7 @@ import { Decimal } from '@prisma/client/runtime/library';
 import type { AuthContextUser } from '../shared/auth.types';
 import { clampLimit, decodeCursor, encodeCursor } from '../shared/pagination';
 import { paymentHttpException } from '../shared/payment-http.exception';
-import { internalApiKeyMatches, isAdmin } from '../shared/roles';
+import { isAdmin } from '../shared/roles';
 import { PrismaService } from '../prisma/prisma.service';
 import { toOrderDto, type OrderWithRelations } from '../orders/order.mapper';
 import type { ApplyDiscountDto } from './dto/apply-discount.dto';
@@ -83,14 +83,10 @@ export class DiscountsService {
     return this.templateToDto(created);
   }
 
-  async getTemplate(
-    user: AuthContextUser,
-    code: string,
-    internalHeader: string | undefined,
-  ): Promise<unknown> {
+  async getTemplate(user: AuthContextUser, code: string): Promise<unknown> {
     const upper = code.toUpperCase();
-    if (!isAdmin(user) && !internalApiKeyMatches(internalHeader)) {
-      throw paymentHttpException(HttpStatus.FORBIDDEN, 'FORBIDDEN', 'Admin or internal key required');
+    if (!isAdmin(user)) {
+      throw paymentHttpException(HttpStatus.FORBIDDEN, 'FORBIDDEN', 'Admin required');
     }
     const t = await this.prisma.discountTemplate.findUnique({
       where: { code: upper },

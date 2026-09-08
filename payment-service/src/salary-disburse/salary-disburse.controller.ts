@@ -1,7 +1,11 @@
-import { Body, Controller, Get, Headers, Param, Post } from '@nestjs/common';
+import { Body, Controller, Get, Headers, Param, Post, UseGuards } from '@nestjs/common';
 import { IsInt, IsNotEmpty, IsObject, IsString, Min } from 'class-validator';
+import { InternalAuthGuard } from '../auth/internal-token.guard';
+import { Roles } from '../auth/roles.decorator';
 import { Public } from '../shared/public.decorator';
 import { SalaryDisburseService } from './salary-disburse.service';
+
+export const PAYMENT_SERVICE_INTERNAL_ROLE = 'internal:payment-service:internal';
 
 class SalaryDisburseDto {
   @IsString()
@@ -24,26 +28,22 @@ class SalaryDisburseDto {
 }
 
 @Public()
+@UseGuards(InternalAuthGuard)
+@Roles(PAYMENT_SERVICE_INTERNAL_ROLE)
 @Controller('internal/salary/disburse')
 export class SalaryDisburseController {
   constructor(private readonly service: SalaryDisburseService) {}
 
   @Post()
   create(
-    @Headers('x-internal-token') token: string | undefined,
-    @Headers('x-service-name') serviceName: string | undefined,
     @Headers('idempotency-key') idempotencyKey: string | undefined,
     @Body() body: SalaryDisburseDto,
   ) {
-    return this.service.create(token, serviceName, idempotencyKey, body);
+    return this.service.create(idempotencyKey, body);
   }
 
   @Get(':payoutRef')
-  get(
-    @Headers('x-internal-token') token: string | undefined,
-    @Headers('x-service-name') serviceName: string | undefined,
-    @Param('payoutRef') payoutRef: string,
-  ) {
-    return this.service.get(token, serviceName, payoutRef);
+  get(@Param('payoutRef') payoutRef: string) {
+    return this.service.get(payoutRef);
   }
 }

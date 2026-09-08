@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { getOutboundInternalToken } from './internal-api-token';
+import { getOutboundCourseServiceToken } from './internal-api-token';
 import { fetchJsonWithRetry } from './http-fetch';
 
 export type ProductMetadataItem = {
@@ -18,8 +18,6 @@ export type ProductsMetadataResponse = {
 export class CourseClientService {
   private readonly logger = new Logger(CourseClientService.name);
 
-  private readonly serviceName = process.env.SERVICE_NAME || 'speakasap-financial';
-
   private baseUrl(): string {
     const u = process.env.COURSE_SERVICE_URL?.replace(/\/$/, '');
     if (!u) {
@@ -33,7 +31,7 @@ export class CourseClientService {
   }
 
   async fetchProductsMetadata(ids: number[]): Promise<ProductsMetadataResponse> {
-    const token = getOutboundInternalToken();
+    const token = getOutboundCourseServiceToken();
     const q = new URLSearchParams({ ids: ids.join(',') });
     const url = `${this.baseUrl()}/api/v1/internal/financial/products-metadata?${q.toString()}`;
     const controller = new AbortController();
@@ -44,7 +42,7 @@ export class CourseClientService {
         url,
         {
           method: 'GET',
-          headers: { 'X-Internal-Token': token, 'X-Service-Name': this.serviceName },
+          headers: { Authorization: `Bearer ${token}` },
           signal: controller.signal,
         },
         this.logger,

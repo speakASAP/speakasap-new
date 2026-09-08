@@ -161,24 +161,19 @@ spec:
       remoteRef:
         key: secret/prod/speakasap/financial
         property: FINANCIAL_DATABASE_URL
-    # Outbound X-Internal-Token to payment/salary/course (receivers not yet on Auth RS256).
-    # Inbound financial InternalAuthGuard uses Authorization Bearer from callers.
-    - secretKey: INTERNAL_API_TOKEN
+    # Per-pair Auth RS256 outbound JWTs (SERVICE_IDENTITY_CONSUMER_STANDARD).
+    - secretKey: FINANCIAL_TO_PAYMENT_SERVICE_TOKEN
       remoteRef:
         key: secret/prod/speakasap/financial
-        property: FINANCIAL_INTERNAL_API_TOKEN
-    - secretKey: COURSE_SERVICE_INTERNAL_TOKEN
+        property: FINANCIAL_TO_PAYMENT_SERVICE_TOKEN
+    - secretKey: FINANCIAL_TO_SALARY_SERVICE_TOKEN
       remoteRef:
         key: secret/prod/speakasap/financial
-        property: FINANCIAL_INTERNAL_API_TOKEN
-    - secretKey: PAYMENT_SERVICE_INTERNAL_TOKEN
+        property: FINANCIAL_TO_SALARY_SERVICE_TOKEN
+    - secretKey: FINANCIAL_TO_COURSE_SERVICE_TOKEN
       remoteRef:
         key: secret/prod/speakasap/financial
-        property: FINANCIAL_INTERNAL_API_TOKEN
-    - secretKey: SALARY_SERVICE_INTERNAL_TOKEN
-      remoteRef:
-        key: secret/prod/speakasap/financial
-        property: FINANCIAL_INTERNAL_API_TOKEN
+        property: FINANCIAL_TO_COURSE_SERVICE_TOKEN
     # Per-pair RS256 ingest: svc-<deploy>--logging-microservice@internal.alfares.cz
     # role internal:logging-microservice:ingest.
     - secretKey: LOGGING_SERVICE_TOKEN

@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { getOutboundInternalToken } from './internal-api-token';
+import { getOutboundSalaryServiceToken } from './internal-api-token';
 import { fetchJsonWithRetry } from './http-fetch';
 
 export type SalaryPeriodTotalsResponse = {
@@ -12,8 +12,6 @@ export type SalaryPeriodTotalsResponse = {
 @Injectable()
 export class SalaryClientService {
   private readonly logger = new Logger(SalaryClientService.name);
-
-  private readonly serviceName = process.env.SERVICE_NAME || 'speakasap-financial';
 
   private baseUrl(): string {
     const u = process.env.SALARY_SERVICE_URL?.replace(/\/$/, '');
@@ -28,7 +26,7 @@ export class SalaryClientService {
   }
 
   async fetchPeriodSalaryTotals(month: string): Promise<SalaryPeriodTotalsResponse> {
-    const token = getOutboundInternalToken();
+    const token = getOutboundSalaryServiceToken();
     const q = new URLSearchParams({ month });
     const url = `${this.baseUrl()}/api/v1/internal/financial/period-salary-totals?${q.toString()}`;
     const controller = new AbortController();
@@ -39,7 +37,7 @@ export class SalaryClientService {
         url,
         {
           method: 'GET',
-          headers: { 'X-Internal-Token': token, 'X-Service-Name': this.serviceName },
+          headers: { Authorization: `Bearer ${token}` },
           signal: controller.signal,
         },
         this.logger,

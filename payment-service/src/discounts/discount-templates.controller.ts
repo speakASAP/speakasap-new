@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Headers, Param, Post, Query, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query, Req, UseGuards } from '@nestjs/common';
 import type { Request } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CreateDiscountTemplateDto } from './dto/create-discount-template.dto';
@@ -24,11 +24,7 @@ export class DiscountTemplatesController {
   }
 
   @Get('templates/:code')
-  async getOne(
-    @Req() req: Request,
-    @Param('code') code: string,
-    @Headers('x-internal-api-key') internalKey?: string,
-  ): Promise<unknown> {
-    return this.discounts.getTemplate(req.authUser!, code, internalKey);
+  async getOne(@Req() req: Request, @Param('code') code: string): Promise<unknown> {
+    return this.discounts.getTemplate(req.authUser!, code);
   }
 }

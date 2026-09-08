@@ -56,7 +56,7 @@ describe('PaymentClientService', () => {
   beforeEach(() => {
     client = new PaymentClientService();
     process.env.PAYMENT_SERVICE_URL = 'http://payment.test';
-    process.env.PAYMENT_SERVICE_INTERNAL_TOKEN = 'tok-internal';
+    process.env.SALARY_TO_PAYMENT_SERVICE_TOKEN = 'tok-internal';
     process.env.HTTP_CLIENT_TIMEOUT_MS = '50';
     jest.spyOn(client['logger'], 'log').mockImplementation(() => undefined);
     jest.spyOn(client['logger'], 'warn').mockImplementation(() => undefined);
@@ -90,7 +90,8 @@ describe('PaymentClientService', () => {
       const init = fetchMock.mock.calls[0][1] as RequestInit;
       const headers = init.headers as Record<string, string>;
       expect(headers['Idempotency-Key']).toBe('key-1');
-      expect(headers['X-Internal-Token']).toBe('tok-internal');
+      expect(headers['Authorization']).toBe('Bearer tok-internal');
+      expect(headers['X-Internal-Token']).toBeUndefined();
       expect(JSON.parse(init.body as string)).toEqual(body);
     });
 

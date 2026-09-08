@@ -54,13 +54,12 @@ Each SpeakASAP service owns its own PostgreSQL database (speakasap_*_db). paymen
 `JwtOrInternalGuard`: Authorization Bearer validated via
 `AUTH_SERVICE_URL/auth/validate` with explicit `@Roles`
 (`internal:<target>:<role>`). Gateway second hop stamps
-`GATEWAY_TO_<SERVICE>_TOKEN`. Static `INTERNAL_API_TOKEN` /
-`FINANCIAL_INTERNAL_API_TOKEN` / `INTERNAL_API_KEY` compares on the listed
-guards are deleted.
+`GATEWAY_TO_<SERVICE>_TOKEN`. Payment and salary lanes (including salary
+disburse) and financial outbound use Auth-issued RS256 only. Static
+`INTERNAL_API_TOKEN` / `FINANCIAL_INTERNAL_API_TOKEN` / `INTERNAL_API_KEY`
+compares on the listed guards are deleted.
 
 Remaining non-conformance (do not extend):
-- financial-service **outbound** to payment/salary/course still sends
-  `X-Internal-Token` until those receivers migrate.
 - content-service internal routes still rely on gateway entry auth only
   (no service-side InternalAuthGuard yet).
 

@@ -167,10 +167,11 @@ spec:
       remoteRef:
         key: secret/prod/speakasap/salary
         property: SALARY_DATABASE_URL
-    - secretKey: PAYMENT_SERVICE_INTERNAL_TOKEN
+    # Auth RS256 pair JWT: svc-salary-service--payment-service → internal:payment-service:internal
+    - secretKey: SALARY_TO_PAYMENT_SERVICE_TOKEN
       remoteRef:
-        key: secret/prod/speakasap
-        property: PAYMENT_API_KEY
+        key: secret/prod/speakasap/salary
+        property: SALARY_TO_PAYMENT_SERVICE_TOKEN
     # education-service validates the salary aggregates endpoint against its OWN
     # Auth RS256 pair JWT for education InternalAuthGuard
     # (SALARY_TO_EDUCATION_SERVICE_TOKEN → internal:education-service:internal).

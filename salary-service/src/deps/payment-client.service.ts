@@ -22,8 +22,10 @@ export class PaymentClientService {
     if (!base) {
       throw new Error('PAYMENT_SERVICE_URL_missing');
     }
-    const token =
-      process.env.PAYMENT_SERVICE_INTERNAL_TOKEN || process.env.INTERNAL_API_TOKEN || '';
+    const token = (process.env.SALARY_TO_PAYMENT_SERVICE_TOKEN || '').trim();
+    if (!token) {
+      throw new Error('SALARY_TO_PAYMENT_SERVICE_TOKEN_missing');
+    }
     const url = `${base}/api/v1/internal/salary/disburse`;
     const timeoutMs = Number(process.env.HTTP_CLIENT_TIMEOUT_MS || '8000');
     const started = Date.now();
@@ -34,7 +36,7 @@ export class PaymentClientService {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-Internal-Token': token,
+          Authorization: `Bearer ${token}`,
           'Idempotency-Key': idempotencyKey,
         },
         body: JSON.stringify(body),
@@ -62,8 +64,10 @@ export class PaymentClientService {
     if (!base) {
       throw new Error('PAYMENT_SERVICE_URL_missing');
     }
-    const token =
-      process.env.PAYMENT_SERVICE_INTERNAL_TOKEN || process.env.INTERNAL_API_TOKEN || '';
+    const token = (process.env.SALARY_TO_PAYMENT_SERVICE_TOKEN || '').trim();
+    if (!token) {
+      throw new Error('SALARY_TO_PAYMENT_SERVICE_TOKEN_missing');
+    }
     const url = `${base}/api/v1/internal/salary/disburse/${encodeURIComponent(payoutRef)}`;
     const timeoutMs = Number(process.env.HTTP_CLIENT_TIMEOUT_MS || '8000');
     const maxAttempts = 5;
@@ -81,7 +85,7 @@ export class PaymentClientService {
       try {
         const res = await fetch(url, {
           method: 'GET',
-          headers: { 'X-Internal-Token': token },
+          headers: { Authorization: `Bearer ${token}` },
           signal: controller.signal,
         });
         const durationMs = Date.now() - started;
