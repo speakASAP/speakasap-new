@@ -135,9 +135,10 @@ data:
   ASSETS_BASE_URL: "https://assets.alfares.cz"
   FRONTEND_URL: "https://speakasap.alfares.cz"
   CORS_ORIGIN: "https://speakasap.alfares.cz"
-  # Role policy: shadow | enforce | strict. enforce denies unsatisfied @route
-  # roles; undeclared routes still pass. Do not jump to strict without soak.
-  GATEWAY_ROLE_ENFORCEMENT: "enforce"
+  # Role policy: shadow | enforce | strict. Undeclared routes are denied in
+  # strict. Soak on enforce showed 0 role-policy undeclared lines on the live
+  # pod since 2026-09-08T11:28Z.
+  GATEWAY_ROLE_ENFORCEMENT: "strict"
 ---
 # Second-hop Auth RS256 pair JWTs for /api/v1/internal/* (Track J).
 # Entry hop is Auth Bearer → /auth/validate with an internal:* role (no static
