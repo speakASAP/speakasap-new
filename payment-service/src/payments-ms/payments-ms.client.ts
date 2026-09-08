@@ -23,8 +23,21 @@ export class PaymentsMsClient {
     return (process.env.PAYMENTS_MICROSERVICE_URL || '').replace(/\/$/, '');
   }
 
-  private apiKey(): string {
-    return process.env.PAYMENTS_MICROSERVICE_API_KEY || '';
+  /** Auth RS256 pair JWT (svc-speakasap-payment--payments-microservice). */
+  private serviceToken(): string {
+    const token = process.env.SPEAKASAP_PAYMENT_TO_PAYMENTS_TOKEN;
+    if (!token) {
+      throw paymentHttpException(
+        HttpStatus.INTERNAL_SERVER_ERROR,
+        'PROVIDER_ERROR',
+        'SPEAKASAP_PAYMENT_TO_PAYMENTS_TOKEN is required for payments-microservice calls',
+      );
+    }
+    return token;
+  }
+
+  private authHeaders(): Record<string, string> {
+    return { Authorization: `Bearer ${this.serviceToken()}` };
   }
 
   async createPayment(payload: CreatePaymentPayload): Promise<{
@@ -110,7 +123,7 @@ export class PaymentsMsClient {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-API-Key': this.apiKey(),
+          ...this.authHeaders(),
         },
         body: JSON.stringify(body),
         signal: controller.signal,
@@ -151,7 +164,7 @@ export class PaymentsMsClient {
     try {
       const res = await fetch(url, {
         method: 'GET',
-        headers: { 'X-API-Key': this.apiKey() },
+        headers: this.authHeaders(),
         signal: controller.signal,
       });
       const durationMs = Date.now() - started;

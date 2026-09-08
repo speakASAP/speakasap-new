@@ -156,10 +156,7 @@ spec:
       remoteRef:
         key: secret/prod/speakasap/user
         property: DATABASE_URL
-    # auth-microservice InternalServiceOrRoleGuard: prefer AUTH_SERVICE_TOKEN
-    # (per-pair RS256). INTERNAL_SERVICE_TOKEN remains for the migration window.
-    # Principal: svc-user-service--auth-microservice@internal.alfares.cz
-    # role internal:auth-microservice:speakasap-teacher-grant
+    # S2S: auth-microservice/docs/SERVICE_IDENTITY_CONSUMER_STANDARD.md
     - secretKey: AUTH_SERVICE_TOKEN
       remoteRef:
         key: secret/prod/speakasap/user
@@ -168,8 +165,7 @@ spec:
       remoteRef:
         key: secret/prod/auth-microservice
         property: INTERNAL_SERVICE_TOKEN
-    # Per-pair RS256 ingest: svc-<deploy>--logging-microservice@internal.alfares.cz
-    # role internal:logging-microservice:ingest.
+    # S2S logging ingest: auth-microservice/docs/SERVICE_IDENTITY_CONSUMER_STANDARD.md
     - secretKey: LOGGING_SERVICE_TOKEN
       remoteRef:
         key: secret/prod/speakasap/user

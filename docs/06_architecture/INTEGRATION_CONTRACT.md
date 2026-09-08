@@ -48,31 +48,13 @@ Each SpeakASAP service owns its own PostgreSQL database (speakasap_*_db). paymen
 
 - JWT validation is required on all protected student/teacher/operator routes across services and api-gateway.
 - Unauthenticated requests to protected routes are rejected.
-- For machine service identity, follow the sole canonical [`SERVICE_IDENTITY_CONSUMER_STANDARD.md`](../../../auth-microservice/docs/SERVICE_IDENTITY_CONSUMER_STANDARD.md). It is not reproduced here.
-
-**Service identity (intra-SpeakASAP).** Receivers use `InternalAuthGuard` /
-`JwtOrInternalGuard`: Authorization Bearer validated via
-`AUTH_SERVICE_URL/auth/validate` with explicit `@Roles`
-(`internal:<target>:<role>`). Gateway second hop stamps
-`GATEWAY_TO_<SERVICE>_TOKEN`. Payment and salary lanes (including salary
-disburse) and financial outbound use Auth-issued RS256 only. Static
-`INTERNAL_API_TOKEN` / `FINANCIAL_INTERNAL_API_TOKEN` / `INTERNAL_API_KEY`
-compares on the listed guards are deleted.
-
-Remaining non-conformance (do not extend): none for Nest SpeakASAP
-receivers after content-service InternalAuthGuard. Portal inbound uses
-Auth RS256 Bearer → `/auth/validate` with `internal:speakasap-portal:internal`
-(education `EDUCATION_TO_PORTAL_SERVICE_TOKEN`); static
-`PORTAL_INBOUND_API_TOKEN` / `x-internal-token` deleted. Portal outbound
-drills use `PORTAL_TO_EDUCATION_SERVICE_TOKEN`.
-
-Gateway **entry** hop for `/api/v1/internal/*` is Auth RS256 Bearer →
-`/auth/validate` with `internal:speakasap-api-gateway:*` only (not any
-`internal:*`). Static `GATEWAY_INTERNAL_API_TOKEN` / `x-internal-token` are
-deleted.
-
-SpeakASAP → **auth-microservice** callers use `AUTH_SERVICE_TOKEN` (RS256) only —
-do not reintroduce static tokens on that lane.
+- Machine service identity follows only
+  [`SERVICE_IDENTITY_CONSUMER_STANDARD.md`](../../../auth-microservice/docs/SERVICE_IDENTITY_CONSUMER_STANDARD.md).
+  Intra-SpeakASAP hops use Auth-issued RS256 Bearer tokens validated via
+  `/auth/validate` with explicit `internal:<target>:<role>` (pair env keys such as
+  `GATEWAY_TO_<SERVICE>_TOKEN`, `EDUCATION_TO_PORTAL_SERVICE_TOKEN`,
+  `PORTAL_TO_EDUCATION_SERVICE_TOKEN`, `AUTH_SERVICE_TOKEN`). Do not invent a
+  parallel S2S credential model in this repository.
 
 ## synchronous dependencies
 

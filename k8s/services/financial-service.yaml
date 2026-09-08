@@ -174,8 +174,7 @@ spec:
       remoteRef:
         key: secret/prod/speakasap/financial
         property: FINANCIAL_TO_COURSE_SERVICE_TOKEN
-    # Per-pair RS256 ingest: svc-<deploy>--logging-microservice@internal.alfares.cz
-    # role internal:logging-microservice:ingest.
+    # S2S: auth-microservice/docs/SERVICE_IDENTITY_CONSUMER_STANDARD.md
     - secretKey: LOGGING_SERVICE_TOKEN
       remoteRef:
         key: secret/prod/speakasap/financial

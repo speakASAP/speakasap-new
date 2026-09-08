@@ -15,6 +15,7 @@ const REQUIRED_ENV = [
   'NOTIFICATION_RETRY_DELAY_MS',
   'AI_SERVICE_URL',
   'AI_SERVICE_TIMEOUT',
+  'CONTENT_TO_AI_SERVICE_TOKEN',
 ];
 
 export function validateEnv(): void {

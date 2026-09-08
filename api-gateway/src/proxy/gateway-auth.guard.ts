@@ -13,7 +13,7 @@ import { hasAnyRole, normalizeRoleNames, resolveRolePolicy } from './route-roles
 
 type ServiceActor = {
   type: 'service';
-  /** Auth principal id (svc-<caller>--<target>@...), never a caller-supplied header. */
+  /** S2S: auth-microservice/docs/SERVICE_IDENTITY_CONSUMER_STANDARD.md */
   serviceName: string;
   authMethod: 'auth-rs256';
 };

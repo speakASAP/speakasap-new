@@ -179,12 +179,11 @@ spec:
       remoteRef:
         key: secret/prod/speakasap
         property: PAYMENT_WEBHOOK_API_KEY
-    - secretKey: PAYMENTS_MICROSERVICE_API_KEY
+    - secretKey: SPEAKASAP_PAYMENT_TO_PAYMENTS_TOKEN
       remoteRef:
-        key: secret/prod/speakasap
-        property: PAYMENTS_MICROSERVICE_API_KEY
-    # Per-pair RS256 ingest: svc-<deploy>--logging-microservice@internal.alfares.cz
-    # role internal:logging-microservice:ingest.
+        key: secret/prod/speakasap/payment
+        property: SPEAKASAP_PAYMENT_TO_PAYMENTS_TOKEN
+    # S2S: auth-microservice/docs/SERVICE_IDENTITY_CONSUMER_STANDARD.md
     - secretKey: LOGGING_SERVICE_TOKEN
       remoteRef:
         key: secret/prod/speakasap/payment

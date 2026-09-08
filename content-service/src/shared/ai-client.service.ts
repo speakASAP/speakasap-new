@@ -19,11 +19,18 @@ export type TranslateResponse = {
   durationMs: number;
 };
 
+/**
+ * Calls ai-microservice translation.
+ *
+ * Auth: Auth-issued RS256 pair JWT (`CONTENT_TO_AI_SERVICE_TOKEN`) as
+ * Authorization Bearer. API-key / x-api-key substitute deleted — ai-microservice
+ * ServiceAuthGuard accepts Auth RS256 only (`internal:ai-microservice:invoke`).
+ * See SERVICE_IDENTITY_CONSUMER_STANDARD.
+ */
 @Injectable()
 export class AiClientService {
   private readonly logger = new Logger(AiClientService.name);
   private readonly aiServiceUrl = process.env.AI_SERVICE_URL;
-  private readonly aiServiceApiKey = process.env.AI_SERVICE_API_KEY;
   private readonly translatePath = process.env.AI_SERVICE_TRANSLATE_PATH || '/api/v1/translate';
   private readonly timeoutMs = Number(process.env.AI_SERVICE_TIMEOUT || process.env.HTTP_TIMEOUT || 5000);
   private readonly retryAttempts = Number(process.env.RETRY_MAX_ATTEMPTS || 1);
@@ -33,6 +40,7 @@ export class AiClientService {
     if (!this.aiServiceUrl) {
       throw new ServiceUnavailableException('AI service is not configured');
     }
+    this.serviceToken();
 
     const retries = Math.max(1, this.retryAttempts);
     const startedAt = Date.now();
@@ -74,6 +82,16 @@ export class AiClientService {
     throw new ServiceUnavailableException('AI translation service unavailable');
   }
 
+  private serviceToken(): string {
+    const token = (process.env.CONTENT_TO_AI_SERVICE_TOKEN || '').trim();
+    if (!token) {
+      throw new ServiceUnavailableException(
+        'CONTENT_TO_AI_SERVICE_TOKEN (Auth-minted RS256) is required for ai-microservice calls',
+      );
+    }
+    return token;
+  }
+
   private async callTranslateEndpoint(payload: TranslateRequest): Promise<TranslateResponse> {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
@@ -82,7 +100,7 @@ export class AiClientService {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(this.aiServiceApiKey ? { 'x-api-key': this.aiServiceApiKey } : {}),
+          Authorization: `Bearer ${this.serviceToken()}`,
         },
         body: JSON.stringify({
           text: payload.text,

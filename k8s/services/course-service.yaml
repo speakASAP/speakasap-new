@@ -155,8 +155,7 @@ spec:
       remoteRef:
         key: secret/prod/speakasap/course
         property: DATABASE_URL
-    # Per-pair RS256 ingest: svc-<deploy>--logging-microservice@internal.alfares.cz
-    # role internal:logging-microservice:ingest.
+    # S2S: auth-microservice/docs/SERVICE_IDENTITY_CONSUMER_STANDARD.md
     - secretKey: LOGGING_SERVICE_TOKEN
       remoteRef:
         key: secret/prod/speakasap/course
