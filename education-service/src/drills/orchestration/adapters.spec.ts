@@ -12,7 +12,7 @@ describe('DrillIdentityResolverAdapter', () => {
     jest.resetAllMocks();
     global.fetch = fetchMock as any;
     process.env.AUTH_SERVICE_URL = 'http://auth-microservice:3370';
-    process.env.INTERNAL_API_TOKEN = 'gateway-convention-secret';
+    process.env.EDUCATION_TO_CONTENT_SERVICE_TOKEN = 'rs256-edu-to-content';
     process.env.AUTH_SERVICE_TOKEN = 'rs256-service-jwt';
     delete process.env.INTERNAL_SERVICE_TOKEN;
     adapter = new DrillIdentityResolverAdapter();

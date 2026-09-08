@@ -45,7 +45,7 @@ export class DrillSetsClientAdapter {
    * routes return answers.
    */
   private internalCallerToken(): string {
-    return requiredEnv('INTERNAL_API_TOKEN', 'content-service');
+    return requiredEnv('EDUCATION_TO_CONTENT_SERVICE_TOKEN', 'content-service');
   }
 }
 

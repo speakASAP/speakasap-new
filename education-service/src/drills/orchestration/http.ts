@@ -4,10 +4,8 @@ export interface UpstreamRequest {
   /** Absolute URL, already query-encoded. */
   url: string;
   method: 'GET' | 'POST' | 'PATCH' | 'DELETE';
-  /** Caller's bearer token, forwarded verbatim. */
+  /** Auth RS256 pair JWT sent as Authorization Bearer. */
   token: string;
-  /** Present on gateway `internal/` routes only. */
-  internalToken?: string;
   /** Sent as `idempotency-key`. Upstreams that honour it replay rather than repeat. */
   idempotencyKey?: string;
   body?: unknown;
@@ -41,9 +39,6 @@ export async function requestUpstream<T>(req: UpstreamRequest): Promise<T> {
     Authorization: `Bearer ${req.token}`,
     Accept: 'application/json',
   };
-  if (req.internalToken) {
-    headers['x-internal-token'] = req.internalToken;
-  }
   if (req.idempotencyKey) {
     headers['idempotency-key'] = req.idempotencyKey;
   }

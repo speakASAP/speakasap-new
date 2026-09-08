@@ -16,7 +16,7 @@ describe('ContentClient', () => {
     jest.resetAllMocks();
     global.fetch = fetchMock as any;
     process.env.CONTENT_SERVICE_URL = 'http://content:4201';
-    process.env.INTERNAL_API_TOKEN = 'internal-secret';
+    process.env.EDUCATION_TO_CONTENT_SERVICE_TOKEN = 'rs256-edu-to-content';
     delete process.env.DRILL_CLIENT_TIMEOUT_MS;
   });
 
@@ -29,7 +29,7 @@ describe('ContentClient', () => {
 
     await new ContentClient().searchItems(SEARCH_REQ, 'tok-1');
 
-    expect(fetchMock.mock.calls[0][1].headers.Authorization).toBe('Bearer tok-1');
+    expect(fetchMock.mock.calls[0][1].headers.Authorization).toBe('Bearer rs256-edu-to-content');
   });
 
   // The bank routes live behind the gateway's `internal/` prefix, which rejects
@@ -43,7 +43,8 @@ describe('ContentClient', () => {
 
     const [url, init] = fetchMock.mock.calls[0];
     expect(url).toBe('http://content:4201/api/v1/internal/drill-items/search');
-    expect(init.headers['x-internal-token']).toBe('internal-secret');
+    expect(init.headers['Authorization']).toBe('Bearer rs256-edu-to-content');
+    expect(init.headers['x-internal-token']).toBeUndefined();
   });
 
   it('throws ServiceUnavailable rather than returning an empty result on 500', async () => {
@@ -117,7 +118,8 @@ describe('ContentClient', () => {
 
     const [url, init] = fetchMock.mock.calls[0];
     expect(url).toBe('http://content:4201/api/v1/internal/drill-sets/set-1/replace-items');
-    expect(init.headers['x-internal-token']).toBe('internal-secret');
+    expect(init.headers['Authorization']).toBe('Bearer rs256-edu-to-content');
+    expect(init.headers['x-internal-token']).toBeUndefined();
     const body = JSON.parse(init.body);
     expect(body.positions).toEqual([0, 2]);
     expect(body.recordRevisionReason).toBe('REGENERATED');
@@ -151,7 +153,8 @@ describe('ContentClient', () => {
     const [url, init] = fetchMock.mock.calls[0];
     expect(url).toBe('http://content:4201/api/v1/internal/drill-sets');
     expect(init.method).toBe('POST');
-    expect(init.headers['x-internal-token']).toBe('internal-secret');
+    expect(init.headers['Authorization']).toBe('Bearer rs256-edu-to-content');
+    expect(init.headers['x-internal-token']).toBeUndefined();
     expect(JSON.parse(init.body).itemIds).toEqual([1, 2]);
     expect(created.uuid).toBe('set-1');
   });

@@ -46,7 +46,7 @@ function parsePayload(encoded: string): LessonRecordMediaTokenPayload {
 @Injectable()
 export class LessonRecordMediaTokenService {
   private secret(): string {
-    return process.env.LESSON_RECORD_MEDIA_TOKEN_SECRET || process.env.INTERNAL_API_TOKEN || '';
+    return process.env.LESSON_RECORD_MEDIA_TOKEN_SECRET || '';
   }
 
   sign(input: Omit<LessonRecordMediaTokenPayload, 'exp'>, ttlSeconds = MAX_TTL_SECONDS): {

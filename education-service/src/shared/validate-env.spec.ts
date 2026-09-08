@@ -11,7 +11,7 @@ const REQUIRED_BASE_ENV: Record<string, string> = {
   AUTH_SERVICE_TIMEOUT: '5000',
   DEFAULT_PAGE_SIZE: '10',
   MAX_PAGE_SIZE: '30',
-  INTERNAL_API_TOKEN: 'test-token',
+  EDUCATION_TO_USER_SERVICE_TOKEN: 'rs256-edu-to-user',
   EDUCATION_TO_NOTIFICATION_SERVICE_TOKEN: 'rs256-edu-to-notification',
   EDUCATION_TO_CONTENT_SERVICE_TOKEN: 'rs256-edu-to-content',
   AI_SERVICE_URL: 'http://ai-microservice:3380',

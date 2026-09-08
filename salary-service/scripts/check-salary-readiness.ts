@@ -62,9 +62,9 @@ async function main() {
   const reportPath = requireArg('--json-report');
   const legacyPortalUserIds = arg('--legacy-portal-user-ids');
   const base = (process.env.EDUCATION_SERVICE_URL || '').replace(/\/$/, '');
-  const token = process.env.EDUCATION_SERVICE_INTERNAL_TOKEN || process.env.INTERNAL_API_TOKEN || '';
+  const token = (process.env.SALARY_TO_EDUCATION_SERVICE_TOKEN || '').trim();
   if (!base || !token) {
-    throw new Error('EDUCATION_SERVICE_URL and EDUCATION_SERVICE_INTERNAL_TOKEN or INTERNAL_API_TOKEN are required');
+    throw new Error('EDUCATION_SERVICE_URL and SALARY_TO_EDUCATION_SERVICE_TOKEN are required');
   }
 
   const url = new URL(`${base}/api/v1/internal/salary/period-aggregates`);
@@ -73,7 +73,7 @@ async function main() {
     url.searchParams.set('legacyPortalUserIds', legacyPortalUserIds.trim());
   }
 
-  const res = await fetch(url, { headers: { 'X-Internal-Token': token } });
+  const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
   if (!res.ok) {
     throw new Error(`education aggregate request failed with HTTP ${res.status}`);
   }

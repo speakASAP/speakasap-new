@@ -232,9 +232,9 @@ export class InternalSalaryService {
 
   private async fetchTeacherMap(legacyPortalUserIds: number[]): Promise<TeacherMapItem[]> {
     const base = process.env.USER_SERVICE_URL?.replace(/\/$/, '');
-    const token = process.env.USER_SERVICE_INTERNAL_TOKEN || process.env.INTERNAL_API_TOKEN || '';
+    const token = (process.env.EDUCATION_TO_USER_SERVICE_TOKEN || '').trim();
     if (!base || !token) {
-      this.logger.warn('USER_SERVICE_URL or internal token unset; salary aggregate teacher map is empty');
+      this.logger.warn('USER_SERVICE_URL or EDUCATION_TO_USER_SERVICE_TOKEN unset; salary aggregate teacher map is empty');
       return [];
     }
     const url = new URL(`${base}/api/v1/internal/teachers/legacy-user-map`);
@@ -246,7 +246,7 @@ export class InternalSalaryService {
     const timer = setTimeout(() => controller.abort(), timeoutMs);
     try {
       const res = await fetch(url.toString(), {
-        headers: { 'X-Internal-Token': token, 'X-Service-Name': this.serviceName },
+        headers: { Authorization: `Bearer ${token}` },
         signal: controller.signal,
       });
       if (!res.ok) {

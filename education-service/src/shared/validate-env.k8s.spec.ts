@@ -76,7 +76,7 @@ const secretKeys = new Set(
 // pass by looking like a Secret-sourced var.
 const SECRET_SOURCED_REQUIRED_ENV = new Set([
   'DATABASE_URL', // secret/prod/speakasap/education via ExternalSecret
-  'INTERNAL_API_TOKEN', // gateway first-hop entry; secret/prod/speakasap/education
+  'EDUCATION_TO_USER_SERVICE_TOKEN',
   'EDUCATION_TO_NOTIFICATION_SERVICE_TOKEN',
   'EDUCATION_TO_CONTENT_SERVICE_TOKEN',
 ]);

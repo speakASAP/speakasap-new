@@ -58,9 +58,8 @@ export interface ReplacementItem {
  * Calls into content-service (Tracks A and A2) for the bank, the vocabulary
  * baseline and drill sets.
  *
- * Routes under `internal/` carry answers (`DrillBlank.answer`/`.alternatives`)
- * and are gated by the gateway on the `x-internal-token` header — a bearer
- * token alone is rejected with 403. See api-gateway/src/proxy/gateway-auth.guard.ts.
+ * Auth RS256 pair JWT (EDUCATION_TO_CONTENT_SERVICE_TOKEN) as Authorization Bearer.
+ * Static x-internal-token / INTERNAL_API_TOKEN deleted.
  */
 @Injectable()
 export class ContentClient {
@@ -78,8 +77,7 @@ export class ContentClient {
     return requestUpstream<DrillItemSearchResponse>({
       url: `${this.baseUrl()}/api/v1/internal/drill-items/search`,
       method: 'POST',
-      token,
-      internalToken: this.internalToken(),
+      token: this.serviceToken(),
       body: req,
       timeoutMs: this.timeoutMs(),
       upstream: UPSTREAM,
@@ -100,8 +98,7 @@ export class ContentClient {
     return requestUpstream<VocabularyBaseline>({
       url: `${this.baseUrl()}/api/v1/internal/course-vocabulary?${query}`,
       method: 'GET',
-      token,
-      internalToken: this.internalToken(),
+      token: this.serviceToken(),
       timeoutMs: this.timeoutMs(),
       upstream: UPSTREAM,
     });
@@ -116,7 +113,7 @@ export class ContentClient {
     return requestUpstream<DrillTopicDTO[]>({
       url: `${this.baseUrl()}/api/v1/drill-topics?${query}`,
       method: 'GET',
-      token,
+      token: this.serviceToken(),
       timeoutMs: this.timeoutMs(),
       upstream: UPSTREAM,
     });
@@ -126,8 +123,7 @@ export class ContentClient {
     return requestUpstream<DrillSetDetailDTO>({
       url: `${this.baseUrl()}/api/v1/internal/drill-sets`,
       method: 'POST',
-      token,
-      internalToken: this.internalToken(),
+      token: this.serviceToken(),
       body: input,
       timeoutMs: this.timeoutMs(),
       upstream: UPSTREAM,
@@ -138,8 +134,7 @@ export class ContentClient {
     return requestUpstream<DrillSetDetailDTO>({
       url: `${this.baseUrl()}/api/v1/internal/drill-sets/${encodeURIComponent(setUuid)}`,
       method: 'GET',
-      token,
-      internalToken: this.internalToken(),
+      token: this.serviceToken(),
       timeoutMs: this.timeoutMs(),
       upstream: UPSTREAM,
     });
@@ -160,8 +155,7 @@ export class ContentClient {
     return requestUpstream<DrillSetDetailDTO>({
       url: `${this.baseUrl()}/api/v1/internal/drill-sets/${encodeURIComponent(setUuid)}/replace-items`,
       method: 'POST',
-      token,
-      internalToken: this.internalToken(),
+      token: this.serviceToken(),
       body: { positions, items, recordRevisionReason: options.recordRevisionReason },
       timeoutMs: this.timeoutMs(),
       upstream: UPSTREAM,
@@ -184,8 +178,7 @@ export class ContentClient {
     return requestUpstream<DrillSetDetailDTO>({
       url: `${this.baseUrl()}/api/v1/internal/drill-sets/${encodeURIComponent(setUuid)}/items/${itemId}`,
       method: 'PATCH',
-      token,
-      internalToken: this.internalToken(),
+      token: this.serviceToken(),
       body: patch,
       timeoutMs: this.timeoutMs(),
       upstream: UPSTREAM,
@@ -200,8 +193,7 @@ export class ContentClient {
     return requestUpstream<DrillSetDetailDTO>({
       url: `${this.baseUrl()}/api/v1/internal/drill-sets/${encodeURIComponent(setUuid)}/items/${itemId}`,
       method: 'DELETE',
-      token,
-      internalToken: this.internalToken(),
+      token: this.serviceToken(),
       timeoutMs: this.timeoutMs(),
       upstream: UPSTREAM,
     });
@@ -215,8 +207,7 @@ export class ContentClient {
     return requestUpstream<DrillSetDetailDTO>({
       url: `${this.baseUrl()}/api/v1/internal/drill-sets/${encodeURIComponent(setUuid)}/items`,
       method: 'POST',
-      token,
-      internalToken: this.internalToken(),
+      token: this.serviceToken(),
       body: item,
       timeoutMs: this.timeoutMs(),
       upstream: UPSTREAM,
@@ -237,8 +228,7 @@ export class ContentClient {
       url: `${this.baseUrl()}/api/v1/internal/drill-sets/${encodeURIComponent(setUuid)}/approve`,
       method: 'POST',
       body: { teacherId },
-      token,
-      internalToken: this.internalToken(),
+      token: this.serviceToken(),
       timeoutMs: this.timeoutMs(),
       upstream: UPSTREAM,
     });
@@ -252,8 +242,7 @@ export class ContentClient {
     return requestUpstream<DrillSetDTO>({
       url: `${this.baseUrl()}/api/v1/internal/drill-sets/${encodeURIComponent(setUuid)}/update`,
       method: 'POST',
-      token,
-      internalToken: this.internalToken(),
+      token: this.serviceToken(),
       body: patch,
       timeoutMs: this.timeoutMs(),
       upstream: UPSTREAM,
@@ -264,7 +253,7 @@ export class ContentClient {
     return requestUpstream<DrillLanguageDTO[]>({
       url: `${this.baseUrl()}/api/v1/drill-languages`,
       method: 'GET',
-      token,
+      token: this.serviceToken(),
       timeoutMs: this.timeoutMs(),
       upstream: UPSTREAM,
     });
@@ -308,7 +297,7 @@ export class ContentClient {
     return requiredEnv('CONTENT_SERVICE_URL', UPSTREAM);
   }
 
-  private internalToken(): string {
-    return requiredEnv('INTERNAL_API_TOKEN', UPSTREAM);
+  private serviceToken(): string {
+    return requiredEnv('EDUCATION_TO_CONTENT_SERVICE_TOKEN', UPSTREAM);
   }
 }
