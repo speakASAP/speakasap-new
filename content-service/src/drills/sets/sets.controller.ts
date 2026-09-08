@@ -11,7 +11,11 @@ import {
   Patch,
   Post,
   Query,
+  UseGuards,
 } from '@nestjs/common';
+import { InternalAuthGuard } from '../../auth/internal-token.guard';
+import { Roles } from '../../auth/roles.decorator';
+import { CONTENT_SERVICE_INTERNAL_ROLE } from '../drills.controller';
 import { SetsService, CreateSetInput, ReplacementItem } from './sets.service';
 import {
   DrillSetDetailDTO,
@@ -32,19 +36,9 @@ export interface StudentScope {
   lessonOrder?: number;
 }
 
-// No @UseGuards here, following the unanimous existing pattern in this service:
-// content-service has no auth guard, no JWT/passport dependency and no `src/auth/`
-// directory. Auth is enforced upstream at the gateway. See the identical note in
-// drills.controller.ts.
-//
-// SECURITY: the split between the two read paths below is the whole point of this
-// controller. `available-for-me` and the list route return DrillSetDTO, which carries
-// no item text and therefore no answers. The full-detail route returns
-// DrillSetDetailDTO, which DOES carry DrillBlank.answer/.alternatives for every item,
-// so it lives under the `internal/` prefix that the gateway gates behind
-// x-internal-token — exactly as Task A.8 did for drill-items/search. The gateway's
-// auth guard validates a token but performs NO role check, so a public prefix here
-// would let any authenticated student harvest the answer bank.
+// SECURITY: public list/available-for-me/ratings stay unguarded (no answers).
+// Internal detail/mutate routes require Auth RS256
+// (`internal:content-service:internal`). Gateway-only trust deleted.
 @Controller()
 export class SetsController {
   private readonly logger = new Logger(SetsController.name);
@@ -93,12 +87,16 @@ export class SetsController {
 
   // Internal-only: carries answers. See the class-level security note.
   @Get('internal/drill-sets/:uuid')
+  @UseGuards(InternalAuthGuard)
+  @Roles(CONTENT_SERVICE_INTERNAL_ROLE)
   async getSet(@Param('uuid') uuid: string): Promise<DrillSetDetailDTO> {
     return this.setsService.getSet(uuid);
   }
 
   @Post('internal/drill-sets')
   @HttpCode(HttpStatus.CREATED)
+  @UseGuards(InternalAuthGuard)
+  @Roles(CONTENT_SERVICE_INTERNAL_ROLE)
   async createSet(@Body() body: CreateSetInput): Promise<DrillSetDetailDTO> {
     if (!body?.uuid) {
       throw new BadRequestException('uuid is required');
@@ -120,6 +118,8 @@ export class SetsController {
    */
   @Post('internal/drill-sets/:uuid/replace-items')
   @HttpCode(HttpStatus.OK)
+  @UseGuards(InternalAuthGuard)
+  @Roles(CONTENT_SERVICE_INTERNAL_ROLE)
   async replaceSetItems(
     @Param('uuid') uuid: string,
     @Body()
@@ -152,6 +152,8 @@ export class SetsController {
    */
   @Patch('internal/drill-sets/:uuid/items/:itemId')
   @HttpCode(HttpStatus.OK)
+  @UseGuards(InternalAuthGuard)
+  @Roles(CONTENT_SERVICE_INTERNAL_ROLE)
   async updateSetItem(
     @Param('uuid') uuid: string,
     @Param('itemId') itemId: string,
@@ -175,6 +177,8 @@ export class SetsController {
 
   @Delete('internal/drill-sets/:uuid/items/:itemId')
   @HttpCode(HttpStatus.OK)
+  @UseGuards(InternalAuthGuard)
+  @Roles(CONTENT_SERVICE_INTERNAL_ROLE)
   async deleteSetItem(
     @Param('uuid') uuid: string,
     @Param('itemId') itemId: string,
@@ -189,6 +193,8 @@ export class SetsController {
   /** Appends a teacher-written sentence. Internal-only: the template carries answers. */
   @Post('internal/drill-sets/:uuid/items')
   @HttpCode(HttpStatus.CREATED)
+  @UseGuards(InternalAuthGuard)
+  @Roles(CONTENT_SERVICE_INTERNAL_ROLE)
   async addSetItem(
     @Param('uuid') uuid: string,
     @Body() body: { template?: string; hint?: string | null },
@@ -207,6 +213,8 @@ export class SetsController {
    */
   @Post('internal/drill-sets/:uuid/update')
   @HttpCode(HttpStatus.OK)
+  @UseGuards(InternalAuthGuard)
+  @Roles(CONTENT_SERVICE_INTERNAL_ROLE)
   async updateSet(
     @Param('uuid') uuid: string,
     @Body() body: { reviewState?: DrillSetReviewState },
@@ -216,6 +224,8 @@ export class SetsController {
 
   @Post('internal/drill-sets/:uuid/approve')
   @HttpCode(HttpStatus.OK)
+  @UseGuards(InternalAuthGuard)
+  @Roles(CONTENT_SERVICE_INTERNAL_ROLE)
   async approveSet(
     @Param('uuid') uuid: string,
     @Body() body: { teacherId?: number },

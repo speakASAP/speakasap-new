@@ -117,9 +117,7 @@ export class DrillIdentityResolverAdapter {
 
     let response: { legacyUserId?: unknown };
     try {
-      // Deliberately NOT requestUpstream: that helper sends `x-internal-token`, the
-      // api-gateway's convention, which is correct for content-service and ai-microservice
-      // but wrong for auth. Auth wants Authorization: Bearer (AUTH_SERVICE_TOKEN) only.
+      // Auth wants Authorization: Bearer (AUTH_SERVICE_TOKEN) only — not gateway hop headers.
       //
       // Sending the gateway's convention here 401'd every call, and because this resolver
       // fails closed, the teacher wizard rendered "Request failed with status 503" with an

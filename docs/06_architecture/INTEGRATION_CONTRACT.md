@@ -59,9 +59,9 @@ disburse) and financial outbound use Auth-issued RS256 only. Static
 `INTERNAL_API_TOKEN` / `FINANCIAL_INTERNAL_API_TOKEN` / `INTERNAL_API_KEY`
 compares on the listed guards are deleted.
 
-Remaining non-conformance (do not extend):
-- content-service internal routes still rely on gateway entry auth only
-  (no service-side InternalAuthGuard yet).
+Remaining non-conformance (do not extend): none for Nest SpeakASAP
+receivers after content-service InternalAuthGuard. Portal PHP inbound
+(`PORTAL_INBOUND_API_TOKEN` / lesson-client) is a separate portal lane.
 
 Gateway **entry** hop for `/api/v1/internal/*` is Auth RS256 Bearer →
 `/auth/validate` with `internal:speakasap-api-gateway:*` only (not any

@@ -1,10 +1,10 @@
 import { Module } from '@nestjs/common';
+import { AuthModule } from '../../auth/auth.module';
 import { SetsController } from './sets.controller';
 import { SetsService } from './sets.service';
 
-// PrismaService comes from the @Global() SharedModule already imported in
-// AppModule, so it is not re-provided here — same as DrillsModule.
 @Module({
+  imports: [AuthModule],
   controllers: [SetsController],
   providers: [SetsService],
   exports: [SetsService],

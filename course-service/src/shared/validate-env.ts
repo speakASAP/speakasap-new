@@ -9,7 +9,6 @@ const REQUIRED_ENV = [
   'AUTH_SERVICE_TIMEOUT',
   'DEFAULT_PAGE_SIZE',
   'MAX_PAGE_SIZE',
-  'INTERNAL_API_TOKEN',
 ];
 
 export function validateEnv(): void {

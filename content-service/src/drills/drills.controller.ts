@@ -9,8 +9,11 @@ import {
   Post,
   Query,
   Req,
+  UseGuards,
 } from '@nestjs/common';
 import { Request } from 'express';
+import { InternalAuthGuard } from '../auth/internal-token.guard';
+import { Roles } from '../auth/roles.decorator';
 import { DrillsService } from './drills.service';
 import {
   DrillItemSearchRequest,
@@ -19,12 +22,12 @@ import {
   DrillTopicDTO,
 } from './contracts';
 
-// No @UseGuards here. content-service has no auth guard, no JWT/passport dependency,
-// and no `src/auth/` directory to begin with — every other controller in this service
-// (grammar, dictionary, phonetics, songs, languages, seven) is likewise unguarded.
-// Auth is enforced upstream at the gateway (Track 0 already added these route prefixes
-// there). Following the existing (unanimous) pattern rather than inventing a new
-// in-service auth mechanism — see the task report for the full note.
+export const CONTENT_SERVICE_INTERNAL_ROLE = 'internal:content-service:internal';
+
+/**
+ * Public drill-topics/languages stay unguarded. Internal bank search requires
+ * Auth RS256 (`internal:content-service:internal`). Gateway-only trust deleted.
+ */
 @Controller()
 export class DrillsController {
   private readonly logger = new Logger(DrillsController.name);
@@ -64,18 +67,11 @@ export class DrillsController {
     return result;
   }
 
-  // Internal-only: DrillItemDTO.blanks carries DrillBlank.answer/.alternatives — the
-  // correct answers to every drill item in the bank. This route must never be
-  // reachable through a public prefix a student's JWT can reach (the gateway's
-  // auth guard checks for a valid token, not a role). It is gateway-routed under
-  // /api/v1/internal/drill-items/search, which requires the x-internal-token
-  // header; content-service itself still applies no guard (see the class-level
-  // comment above), same as every other route here — the gateway is what makes
-  // this safe. Do not move this back under a public prefix without re-reviewing
-  // that constraint. Track D (education-service orchestration) is the only
-  // intended caller.
+  // Internal-only: blanks carry answers. Auth RS256 required on this service.
   @Post('internal/drill-items/search')
   @HttpCode(HttpStatus.OK)
+  @UseGuards(InternalAuthGuard)
+  @Roles(CONTENT_SERVICE_INTERNAL_ROLE)
   async searchItems(
     @Body() body: DrillItemSearchRequest,
     @Req() req?: Request,

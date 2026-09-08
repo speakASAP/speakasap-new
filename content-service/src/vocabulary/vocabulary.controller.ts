@@ -1,5 +1,16 @@
-import { BadRequestException, Controller, Get, Logger, Query, Req } from '@nestjs/common';
+import {
+  BadRequestException,
+  Controller,
+  Get,
+  Logger,
+  Query,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { Request } from 'express';
+import { InternalAuthGuard } from '../auth/internal-token.guard';
+import { Roles } from '../auth/roles.decorator';
+import { CONTENT_SERVICE_INTERNAL_ROLE } from '../drills/drills.controller';
 import { VocabularyService } from './vocabulary.service';
 import { VocabularyBaseline } from '../drills/contracts';
 
@@ -9,14 +20,10 @@ export class VocabularyController {
 
   constructor(private readonly vocabularyService: VocabularyService) {}
 
-  // Internal-only: a course vocabulary baseline reveals exactly which words a
-  // named student/course is assumed to already know, which is generation input
-  // Track D uses to build answer-bearing drill sets — not something a student's
-  // browser session needs or should be able to pull directly for an arbitrary
-  // courseKey. Gateway-routed under /api/v1/internal/course-vocabulary, which
-  // requires the x-internal-token header; no guard is added here (see
-  // DrillsController for the same reasoning) — the gateway enforces this.
+  // Internal-only: course vocabulary baseline for generation. Auth RS256 required.
   @Get('internal/course-vocabulary')
+  @UseGuards(InternalAuthGuard)
+  @Roles(CONTENT_SERVICE_INTERNAL_ROLE)
   async getBaseline(
     @Query('courseKey') courseKey?: string,
     @Query('languageCode') languageCode?: string,
