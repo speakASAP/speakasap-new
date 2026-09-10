@@ -51,7 +51,7 @@ spec:
       template:
         metadata:
           labels:
-            app: speakasap-education
+            app: speakasap-education-job
             component: lesson-record-sync
         spec:
           restartPolicy: Never
