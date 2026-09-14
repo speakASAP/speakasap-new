@@ -26,9 +26,41 @@ NOTIFICATION_SERVICE_TIMEOUT = int(os.getenv('NOTIFICATION_SERVICE_TIMEOUT', '10
 # Retries on timeout/connection (same timeout each time; avoids failing on transient slowness)
 NOTIFICATION_SERVICE_SEND_RETRIES = int(os.getenv('NOTIFICATION_SERVICE_SEND_RETRIES', '2'))
 
-# Optional static Bearer token for service-to-service auth against notifications-microservice.
-# When set, all outgoing requests will include Authorization: Bearer <token>.
-NOTIFICATION_SERVICE_AUTH_TOKEN = os.getenv('NOTIFICATION_SERVICE_AUTH_TOKEN', '').strip()
+# Auth-issued RS256 pair JWT for caller -> notifications-microservice.
+# Identity svc-<caller>--notifications-microservice@internal.alfares.cz, role
+# internal:notifications-microservice:send. See
+# auth-microservice/docs/SERVICE_IDENTITY_CONSUMER_STANDARD.md.
+#
+# NOT a static shared secret. The receiver rejects anything else with
+# "Unsupported token algorithm none; RS256 required" -- which is exactly what
+# happened when this held the old 64-char static key: every send 401'd from
+# 2026-09-07 17:24 onward and Letter.sent stayed NULL, silently, for a week.
+#
+# PORTAL_TO_NOTIFICATIONS_TOKEN is the standard-conformant name; the legacy
+# NOTIFICATION_SERVICE_AUTH_TOKEN is still read so a deployment that has not
+# been migrated keeps working, and is logged once so it does not stay forever.
+NOTIFICATION_SERVICE_AUTH_TOKEN = os.getenv('PORTAL_TO_NOTIFICATIONS_TOKEN', '').strip()
+if not NOTIFICATION_SERVICE_AUTH_TOKEN:
+    NOTIFICATION_SERVICE_AUTH_TOKEN = os.getenv('NOTIFICATION_SERVICE_AUTH_TOKEN', '').strip()
+    if NOTIFICATION_SERVICE_AUTH_TOKEN:
+        logger.warning(
+            'notification client - using legacy NOTIFICATION_SERVICE_AUTH_TOKEN; '
+            'rename it to PORTAL_TO_NOTIFICATIONS_TOKEN '
+            '(SERVICE_IDENTITY_CONSUMER_STANDARD.md)'
+        )
+
+# Fail loud on a credential that cannot possibly work. An unsigned or static
+# value is not a degraded mode -- the receiver will 401 every request and the
+# caller will mark nothing as sent, so say so at import rather than discovering
+# it a week later in an empty inbox.
+if NOTIFICATION_SERVICE_AUTH_TOKEN and NOTIFICATION_SERVICE_AUTH_TOKEN.count('.') != 2:
+    logger.error(
+        'notification client - token is not a JWT (%d chars, %d segments); '
+        'notifications-microservice requires an Auth-issued RS256 pair JWT and '
+        'will reject every send with 401',
+        len(NOTIFICATION_SERVICE_AUTH_TOKEN),
+        NOTIFICATION_SERVICE_AUTH_TOKEN.count('.') + 1,
+    )
 
 
 class NotificationClient(object):
