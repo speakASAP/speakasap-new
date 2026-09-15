@@ -26,6 +26,24 @@ NOTIFICATION_SERVICE_TIMEOUT = int(os.getenv('NOTIFICATION_SERVICE_TIMEOUT', '10
 # Retries on timeout/connection (same timeout each time; avoids failing on transient slowness)
 NOTIFICATION_SERVICE_SEND_RETRIES = int(os.getenv('NOTIFICATION_SERVICE_SEND_RETRIES', '2'))
 
+# Reuse pooled connections instead of opening a new TCP+TLS connection per call.
+#
+# Incident 2026-09-15: 14 sends timed out at exactly ~10.0s and then succeeded on the
+# very next attempt in under 3s. A request that hangs for the full timeout and then
+# completes instantly on a fresh connection is a dead connection, not a slow service
+# (/health answered in 0.18-0.30s throughout, 1.5ms in-cluster). The module-level
+# requests.post() opened a new connection every send, so any connection dropped by the
+# ingress or by Cloudflare surfaced as a full-timeout stall.
+#
+# Raising the timeout would make this worse, not better: the stalled attempt never
+# completes, so a larger timeout only lengthens the stall before the retry that
+# actually works. Keep the timeout at 10s (see the note on it above) and fix the
+# connection instead.
+#
+# max_retries=0: urllib3 must not retry underneath us. The loop in send_email() owns
+# retrying so each attempt is logged and timed individually.
+NOTIFICATION_SERVICE_POOL_SIZE = int(os.getenv('NOTIFICATION_SERVICE_POOL_SIZE', '10'))
+
 # Auth-issued RS256 pair JWT for caller -> notifications-microservice.
 # Identity svc-<caller>--notifications-microservice@internal.alfares.cz, role
 # internal:notifications-microservice:send. See
@@ -75,6 +93,51 @@ class NotificationClient(object):
         """
         self.base_url = base_url or NOTIFICATION_SERVICE_URL
         self.timeout = timeout if timeout is not None else NOTIFICATION_SERVICE_TIMEOUT
+        self.session = self._build_session()
+
+    @staticmethod
+    def _build_session():
+        """
+        Build a requests.Session with a connection pool.
+
+        Keeping connections alive removes the per-send TCP+TLS handshake and, more
+        importantly, lets a retry reuse a known-good connection. urllib3 retries are
+        disabled (max_retries=0) because send_email() does its own retrying and must
+        see and log every individual attempt.
+        """
+        session = requests.Session()
+        try:
+            adapter = requests.adapters.HTTPAdapter(
+                pool_connections=NOTIFICATION_SERVICE_POOL_SIZE,
+                pool_maxsize=NOTIFICATION_SERVICE_POOL_SIZE,
+                max_retries=0,
+            )
+            session.mount('https://', adapter)
+            session.mount('http://', adapter)
+        except Exception as e:
+            # A pooling adapter is an optimisation, not a correctness requirement:
+            # never let it stop the client from being constructed. Say so loudly
+            # rather than silently falling back to unpooled behaviour.
+            logger.error('[NotificationClient] Could not mount pooling adapter (%s) - '
+                         'falling back to per-request connections', str(e))
+        return session
+
+    def _drop_connections(self, request_id, attempt):
+        """
+        Close pooled connections so the next attempt dials a fresh one.
+
+        Called after a timeout or connection error: the connection we just used is
+        suspect, and retrying on the same dead socket reproduces the same stall.
+        """
+        try:
+            self.session.close()
+            self.session = self._build_session()
+            logger.info('[NotificationClient] Request ID: %s - Dropped pooled connections '
+                        'after failed attempt %d; next attempt will use a fresh connection',
+                        request_id, attempt)
+        except Exception as e:
+            logger.error('[NotificationClient] Request ID: %s - Could not reset session '
+                         'after attempt %d: %s', request_id, attempt, str(e))
 
     def send_email(
         self,
@@ -146,7 +209,7 @@ class NotificationClient(object):
                 if NOTIFICATION_SERVICE_AUTH_TOKEN:
                     headers['Authorization'] = 'Bearer {0}'.format(NOTIFICATION_SERVICE_AUTH_TOKEN)
 
-                response = requests.post(
+                response = self.session.post(
                     url,
                     json=payload,
                     timeout=self.timeout,
@@ -176,12 +239,27 @@ class NotificationClient(object):
                 last_exc = e
                 total_duration = time.time() - start_time
                 err_label = 'TIMEOUT' if isinstance(e, requests.Timeout) else 'CONNECTION ERROR'
-                # Log every timeout as ERROR so connectivity/slow execution is visible in logs
-                logger.error('[NotificationClient] send_email() - Request ID: %s - %s on attempt %d/%d after %.3fs: %s (timeout=%ss)',
-                             request_id, err_label, attempt, max_attempts, total_duration, str(e), self.timeout)
+                # Severity follows the OUTCOME, not the attempt.
+                #
+                # This used to log every timeout at ERROR "so connectivity is visible".
+                # In practice 12 of 40 sends on 2026-09-15 logged an ERROR and then
+                # delivered fine on the next attempt, so the log carried ERRORs for mail
+                # that was never lost. That is how 8 days of genuine 401 ERRORs went
+                # unnoticed on this same path: an ERROR that routinely resolves itself
+                # trains everyone to scroll past ERRORs.
+                #
+                # A retryable attempt is a WARNING (nothing is lost yet). ERROR is
+                # reserved for exhausting every attempt, which is the only case where an
+                # email actually fails to send.
                 if attempt < max_attempts:
+                    logger.warning('[NotificationClient] send_email() - Request ID: %s - %s on attempt %d/%d '
+                                   'after %.3fs: %s (timeout=%ss) - retrying on a fresh connection',
+                                   request_id, err_label, attempt, max_attempts, total_duration, str(e), self.timeout)
+                    self._drop_connections(request_id, attempt)
                     time.sleep(2)
                     continue
+                logger.error('[NotificationClient] send_email() - Request ID: %s - %s on FINAL attempt %d/%d after %.3fs: %s (timeout=%ss)',
+                             request_id, err_label, attempt, max_attempts, total_duration, str(e), self.timeout)
                 logger.error('[NotificationClient] send_email() - Request ID: %s - All %d attempts failed. Last error: %s',
                              request_id, max_attempts, str(e))
                 if isinstance(e, requests.Timeout):
@@ -224,7 +302,7 @@ class NotificationClient(object):
             if NOTIFICATION_SERVICE_AUTH_TOKEN:
                 headers['Authorization'] = 'Bearer {0}'.format(NOTIFICATION_SERVICE_AUTH_TOKEN)
 
-            response = requests.get(
+            response = self.session.get(
                 url,
                 timeout=self.timeout,
                 headers=headers
@@ -287,7 +365,7 @@ class NotificationClient(object):
             if NOTIFICATION_SERVICE_AUTH_TOKEN:
                 headers['Authorization'] = 'Bearer {0}'.format(NOTIFICATION_SERVICE_AUTH_TOKEN)
 
-            response = requests.post(
+            response = self.session.post(
                 url,
                 json=payload,
                 timeout=self.timeout,
