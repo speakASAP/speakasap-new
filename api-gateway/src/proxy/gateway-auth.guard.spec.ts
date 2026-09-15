@@ -1,4 +1,4 @@
-import { ForbiddenException, UnauthorizedException } from '@nestjs/common';
+import { ForbiddenException, Logger, UnauthorizedException } from '@nestjs/common';
 import { GatewayAuthGuard } from './gateway-auth.guard';
 import type { AuthContextUser } from '../shared/auth.types';
 
@@ -103,6 +103,27 @@ describe('GatewayAuthGuard — /api/v1/internal Auth RS256 entry', () => {
     await expect(
       guard.canActivate(ctxFor(reqFor('GET', '/api/v1/internal/drill-assignments/x', BEARER))),
     ).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it('reports a wrong-target service credential at error level', async () => {
+    // A caller holding internal:<other-service>:* is misconfigured, not unlucky:
+    // every one of its calls fails identically until someone re-mints. At warn
+    // it took 45 alert repeats over four hours to work out that the drills
+    // blocks on the portal had been dead since the pair rule shipped.
+    const { guard } = guardReturning(userWith(['internal:education-service:internal']));
+    const error = jest
+      .spyOn(Logger.prototype, 'error')
+      .mockImplementation(() => undefined);
+    const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+
+    await expect(
+      guard.canActivate(ctxFor(reqFor('GET', '/api/v1/internal/drill-assignments/x', BEARER))),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+
+    expect(error).toHaveBeenCalled();
+    expect(warn).not.toHaveBeenCalled();
+    error.mockRestore();
+    warn.mockRestore();
   });
 
   it('forbids a valid human JWT with no gateway internal role', async () => {

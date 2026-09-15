@@ -147,9 +147,15 @@ export class GatewayAuthGuard implements CanActivate {
 
     const user = await this.auth.validateAccessToken(bearer);
     if (!hasGatewayInternalRole(user.roles)) {
-      this.logger.warn(
+      // Error, not warn. A caller that reaches here presented a valid token for
+      // the wrong target: the credential is misconfigured, so every call it
+      // makes fails identically until someone re-mints. Logged at warn it is
+      // indistinguishable from a transient, and a caller stayed broken for a day
+      // behind an alert nobody could act on.
+      this.logger.error(
         `${new Date().toISOString()} internal route denied principal=${user.id} ` +
-          `roles=[${rawRoleNames(user.roles).join(',')}]`,
+          `roles=[${rawRoleNames(user.roles).join(',')}] ` +
+          `required=[${GATEWAY_INTERNAL_ROLE_PREFIX}*]`,
       );
       throw new ForbiddenException({
         code: 'FORBIDDEN_INTERNAL_ROUTE',
